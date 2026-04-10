@@ -108,12 +108,25 @@ For each voting group, points are assigned as follows:
 
 ### Setup
 
-```bash
+
 # Clone the repository
-git clone <YOUR_REPO_LINK>
+``` git clone <YOUR_REPO_LINK> ```
 
 # Navigate into the project
-cd <PROJECT_NAME>
+```cd <PROJECT_NAME>```
 
 # Run with Docker
-docker-compose up --build
+```docker-compose up --build```
+
+
+🔧 Other useful commands
+```./start.sh``` Start without seeding
+```./start.sh --seed``` Start + load seed-data.json
+```./start.sh --reset --seed``` Wipe DB + fresh start + seed
+```./start.sh --stop``` Stop all containers
+```./start.sh --logs``` Start + tail live logs
+```python3 scripts/seed.py``` Re-seed a running instance
+```docker compose logs -f app``` Watch Spring Boot logs
+
+✏️ To customise the seed data
+Just edit scripts/seed-data.json — it has all 37 Eurovision 2025 countries, all competing artists, jury members, citizens, and admins pre-filled. Run python3 scripts/seed.py any time to re-push it to a running instance.

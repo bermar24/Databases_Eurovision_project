@@ -1,0 +1,109 @@
+{
+  "_comment": "Eurovision 2025 preset seed data. Edit freely — the seed script reads this file and POSTs to the REST API.",
+
+  "countries": [
+    { "countryCode": "CH", "countryName": "Switzerland" },
+    { "countryCode": "SE", "countryName": "Sweden" },
+    { "countryCode": "NO", "countryName": "Norway" },
+    { "countryCode": "FR", "countryName": "France" },
+    { "countryCode": "DE", "countryName": "Germany" },
+    { "countryCode": "IT", "countryName": "Italy" },
+    { "countryCode": "ES", "countryName": "Spain" },
+    { "countryCode": "GB", "countryName": "United Kingdom" },
+    { "countryCode": "UA", "countryName": "Ukraine" },
+    { "countryCode": "IL", "countryName": "Israel" },
+    { "countryCode": "FI", "countryName": "Finland" },
+    { "countryCode": "AT", "countryName": "Austria" },
+    { "countryCode": "NL", "countryName": "Netherlands" },
+    { "countryCode": "BE", "countryName": "Belgium" },
+    { "countryCode": "PT", "countryName": "Portugal" },
+    { "countryCode": "GR", "countryName": "Greece" },
+    { "countryCode": "HR", "countryName": "Croatia" },
+    { "countryCode": "IS", "countryName": "Iceland" },
+    { "countryCode": "EE", "countryName": "Estonia" },
+    { "countryCode": "LV", "countryName": "Latvia" },
+    { "countryCode": "LT", "countryName": "Lithuania" },
+    { "countryCode": "PL", "countryName": "Poland" },
+    { "countryCode": "CZ", "countryName": "Czech Republic" },
+    { "countryCode": "SK", "countryName": "Slovakia" },
+    { "countryCode": "HU", "countryName": "Hungary" },
+    { "countryCode": "RS", "countryName": "Serbia" },
+    { "countryCode": "AL", "countryName": "Albania" },
+    { "countryCode": "SM", "countryName": "San Marino" },
+    { "countryCode": "MT", "countryName": "Malta" },
+    { "countryCode": "CY", "countryName": "Cyprus" },
+    { "countryCode": "IE", "countryName": "Ireland" },
+    { "countryCode": "DK", "countryName": "Denmark" },
+    { "countryCode": "SI", "countryName": "Slovenia" },
+    { "countryCode": "AM", "countryName": "Armenia" },
+    { "countryCode": "GE", "countryName": "Georgia" },
+    { "countryCode": "AZ", "countryName": "Azerbaijan" },
+    { "countryCode": "ME", "countryName": "Montenegro" }
+  ],
+
+  "shows": [
+    {},
+    {},
+    {}
+  ],
+  "_shows_comment": "3 shows: index 0 = Semi-Final 1, index 1 = Semi-Final 2, index 2 = Grand Final. Add showName/showDate fields once entity is extended.",
+
+  "songs": [
+    { "singerName": "Zoë Më",        "countryCode": "CH" },
+    { "singerName": "KAJ",           "countryCode": "SE" },
+    { "singerName": "Kyle Alessandro","countryCode": "NO" },
+    { "singerName": "Louane",        "countryCode": "FR" },
+    { "singerName": "Abor & Tynna",  "countryCode": "DE" },
+    { "singerName": "Lucio Corsi",   "countryCode": "IT" },
+    { "singerName": "Melody",        "countryCode": "ES" },
+    { "singerName": "Remember Monday","countryCode": "GB" },
+    { "singerName": "Ziferblat",     "countryCode": "UA" },
+    { "singerName": "Yuval Raphael", "countryCode": "IL" },
+    { "singerName": "Erika Vikman",  "countryCode": "FI" },
+    { "singerName": "JJ",            "countryCode": "AT" },
+    { "singerName": "Claude",        "countryCode": "NL" },
+    { "singerName": "Red Sebastian", "countryCode": "BE" },
+    { "singerName": "Napa",          "countryCode": "PT" },
+    { "singerName": "Klavdia",       "countryCode": "GR" },
+    { "singerName": "Marko Bošnjak", "countryCode": "HR" },
+    { "singerName": "VÆB",          "countryCode": "IS" },
+    { "singerName": "Tommy Cash",    "countryCode": "EE" },
+    { "singerName": "Tautumeitas",   "countryCode": "LV" },
+    { "singerName": "Katarsis",      "countryCode": "LT" },
+    { "singerName": "Justyna Steczkowska","countryCode": "PL" },
+    { "singerName": "ADONXS",        "countryCode": "CZ" },
+    { "singerName": "Klemen",        "countryCode": "SI" },
+    { "singerName": "Vætha",         "countryCode": "AL" },
+    { "singerName": "Megara",        "countryCode": "SM" },
+    { "singerName": "Miriana Conte", "countryCode": "MT" },
+    { "singerName": "Theo Evan",     "countryCode": "CY" },
+    { "singerName": "Emmy",          "countryCode": "IE" },
+    { "singerName": "Sissal",        "countryCode": "DK" },
+    { "singerName": "Shkodra Elektronike","countryCode": "ME" },
+    { "singerName": "PARG",          "countryCode": "AM" },
+    { "singerName": "Mariam Bigvava","countryCode": "GE" },
+    { "singerName": "Mamagama",      "countryCode": "AZ" },
+    { "singerName": "Go_A",          "countryCode": "RS" }
+  ],
+
+  "admins": [
+    { "countryCode": "CH", "adminLevel": 1 },
+    { "countryCode": "SE", "adminLevel": 2 }
+  ],
+
+  "jury": [
+    { "countryCode": "DE", "professionalBg": "Music Producer" },
+    { "countryCode": "FR", "professionalBg": "Vocal Coach" },
+    { "countryCode": "IT", "professionalBg": "Composer" },
+    { "countryCode": "ES", "professionalBg": "Conductor" },
+    { "countryCode": "GB", "professionalBg": "Recording Artist" }
+  ],
+
+  "citizens": [
+    { "countryCode": "SE" },
+    { "countryCode": "NO" },
+    { "countryCode": "FI" },
+    { "countryCode": "DK" },
+    { "countryCode": "IS" }
+  ]
+}
