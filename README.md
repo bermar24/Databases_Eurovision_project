@@ -102,21 +102,23 @@ For each voting group, points are assigned as follows:
 
 ### Prerequisites
 
-- Java (version ?)
+- Java (version 17+)
 - Docker
-- MySQL *(if not fully containerized)*
+- MySQL 
 
 ### Setup
 
 
 # Clone the repository
-``` git clone <YOUR_REPO_LINK> ```
+``` git clone <REPO_LINK> ```
 
 # Navigate into the project
-```cd <PROJECT_NAME>```
+```cd Databases_Eurovision_project```
 
-# Run with Docker
-```docker-compose up --build```
+# Run 
+```chmod +x start.sh```
+ 
+```./start.sh --seed```
 
 
 🔧 Other useful commands
@@ -130,3 +132,9 @@ For each voting group, points are assigned as follows:
 
 ✏️ To customise the seed data
 Just edit scripts/seed-data.json — it has all 37 Eurovision 2025 countries, all competing artists, jury members, citizens, and admins pre-filled. Run python3 scripts/seed.py any time to re-push it to a running instance.
+
+# using Parrot OS 
+Start the Podman socket (needed once per session)
+```systemctl --user start podman.socket```
+Then try again
+```./start.sh --seed```
