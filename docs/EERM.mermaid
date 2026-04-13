@@ -1,0 +1,114 @@
+---
+title: Eurovision 2025 — Enhanced Entity Relationship Model (EERM)
+---
+erDiagram
+
+    %% ─────────────────────────────────────────────
+    %% ENTITIES
+    %% ─────────────────────────────────────────────
+
+    COUNTRY {
+        string country_code PK "ISO alpha-2, e.g. DE"
+        string country_name    "e.g. Germany — UNIQUE"
+    }
+
+    USER {
+        bigint user_id   PK  "AUTO_INCREMENT — shared with subtypes"
+        string country_code FK "FK → country"
+    }
+
+    JURY {
+        bigint user_id       PK_FK "FK/PK → user"
+        string professional_bg     "e.g. Music Producer"
+    }
+
+    CITIZEN {
+        bigint user_id PK_FK "FK/PK → user"
+    }
+
+    ADMIN {
+        bigint user_id    PK_FK "FK/PK → user"
+        int    admin_level       "Permission tier: 1=super, 2=standard"
+    }
+
+    SONG {
+        bigint song_id      PK  "AUTO_INCREMENT"
+        string singer_name      "Performing artist — NOT NULL"
+        string country_code  FK "FK → country"
+    }
+
+    VOTE_LOG {
+        bigint vote_log_id  PK  "AUTO_INCREMENT"
+        bigint song_id       FK "FK → song — NOT NULL"
+        bigint jury_id       FK "FK → jury — nullable (jury vote)"
+        bigint citizen_id    FK "FK → citizen — nullable (public vote)"
+    }
+
+    SCORE {
+        bigint score_id   PK  "AUTO_INCREMENT"
+        int    song_score      "Aggregated total points — default 0"
+        bigint song_id     FK "FK → song — UNIQUE NOT NULL"
+    }
+
+    SHOW {
+        bigint show_id   PK "AUTO_INCREMENT"
+        string show_name    "e.g. Semi-Final 1, Grand Final — NOT NULL"
+    }
+
+    %% ─────────────────────────────────────────────
+    %% JOIN TABLES (M:N resolutions)
+    %% ─────────────────────────────────────────────
+
+    SHOW_SONG {
+        bigint show_id  FK "FK → show"
+        bigint song_id  FK "FK → song"
+    }
+
+    ADMIN_SHOW {
+        bigint admin_user_id FK "FK → admin"
+        bigint show_id       FK "FK → show"
+    }
+
+    %% ─────────────────────────────────────────────
+    %% RELATIONSHIPS
+    %% ─────────────────────────────────────────────
+
+    %% ── Has: Country → User (1:M) ────────────────
+    %% "One country has many users"
+    COUNTRY ||--o{ USER : "Has"
+
+    %% ── Is a: User → Jury (Joined Table Inheritance)
+    %% "A Jury IS A User"
+    USER ||--|| JURY    : "Is a"
+    USER ||--|| CITIZEN : "Is a"
+    USER ||--|| ADMIN   : "Is a"
+
+    %% ── Country → Song (1:M) ─────────────────────
+    %% "One country submits many songs"
+    COUNTRY ||--o{ SONG : "submits"
+
+    %% ── Votes: Jury → VoteLog (1:M) ─────────────
+    %% "One jury member casts many votes"
+    JURY    ||--o{ VOTE_LOG : "Votes (jury)"
+
+    %% ── Votes: Citizen → VoteLog (1:M) ──────────
+    %% "One citizen casts many votes"
+    CITIZEN ||--o{ VOTE_LOG : "Votes (public)"
+
+    %% ── VoteLog → Song (M:1) ─────────────────────
+    %% "Many votes target one song"
+    VOTE_LOG }o--|| SONG : "votes for"
+
+    %% ── Calculate: Song → Score (1:1) ────────────
+    %% "One song has one calculated score"
+    SONG    ||--|| SCORE : "Calculate"
+
+    %% ── Song ↔ Show (M:N via SHOW_SONG) ──────────
+    %% "Songs appear in shows"
+    SHOW     ||--o{ SHOW_SONG  : "contains"
+    SONG     ||--o{ SHOW_SONG  : "appears in"
+
+    %% ── Manage: Admin ↔ Show (M:N via ADMIN_SHOW) 
+    %% "Admins manage shows"
+    ADMIN    ||--o{ ADMIN_SHOW : "Manage"
+    SHOW     ||--o{ ADMIN_SHOW : "managed by"
