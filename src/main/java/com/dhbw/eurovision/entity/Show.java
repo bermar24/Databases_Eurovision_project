@@ -26,6 +26,9 @@ public class Show {
     @Column(name = "show_id")
     private Long showId;
 
+    @Column(name = "show_name", nullable = false)
+    private String showName;
+
     // TODO: add show fields once team agrees, e.g.:
     // @Column(name = "show_name", nullable = false)
     // private String showName;

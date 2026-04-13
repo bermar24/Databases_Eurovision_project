@@ -19,7 +19,8 @@ public class ShowFactory {
     /** Build a new Show entity from an inbound request DTO. */
     public Show toEntity(ShowRequestDTO dto) {
         Show show = new Show();
-        // TODO: set showName, showDate, showType once entity fields are added
+        show.setShowName(dto.getShowName());
+        // TODO: set showDate, showType once entity fields are added
         return show;
     }
 
@@ -31,6 +32,6 @@ public class ShowFactory {
         List<Long> adminIds = show.getAdmins() == null ? List.of() :
                 show.getAdmins().stream().map(Admin::getUserId).collect(Collectors.toList());
 
-        return new ShowResponseDTO(show.getShowId(), songIds, adminIds);
+        return new ShowResponseDTO(show.getShowId(), show.getShowName(), songIds, adminIds);
     }
 }
