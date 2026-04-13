@@ -115,26 +115,49 @@ For each voting group, points are assigned as follows:
 # Navigate into the project
 ```cd Databases_Eurovision_project```
 
-# Run 
+# Run on Linux/MacOS
 ```chmod +x start.sh```
  
 ```./start.sh --seed```
 
+## using Parrot OS
+Start the Podman socket (needed once per session) before running the script:
+```systemctl --user start podman.socket```
 
-🔧 Other useful commands
+# Run on Windows
+Prerequisites (Windows)
+- Docker Desktop installed and running (the script checks this and gives a clear error if it's not)
+- Python 3 installed from python.org — tick "Add Python to PATH" during install
+
+How to run (Command Prompt or PowerShell)
+bat:: Start + seed
+```start.bat --seed```
+
+:: Stop containers
+```start.bat --stop```
+
+:: Wipe DB and start fresh
+```start.bat --reset --seed```
+
+:: Tail logs after startup
+```start.bat --seed --logs```
+Then run script: ```./start.sh --seed```
+
+# 🔧 Other useful commands
 ```./start.sh``` Start without seeding
+
 ```./start.sh --seed``` Start + load seed-data.json
+
 ```./start.sh --reset --seed``` Wipe DB + fresh start + seed
+
 ```./start.sh --stop``` Stop all containers
+
 ```./start.sh --logs``` Start + tail live logs
+
 ```python3 scripts/seed.py``` Re-seed a running instance
+
 ```docker compose logs -f app``` Watch Spring Boot logs
 
-✏️ To customise the seed data
+# ✏️ To customise the seed data
 Just edit scripts/seed-data.json — it has all 37 Eurovision 2025 countries, all competing artists, jury members, citizens, and admins pre-filled. Run python3 scripts/seed.py any time to re-push it to a running instance.
 
-# using Parrot OS 
-Start the Podman socket (needed once per session)
-```systemctl --user start podman.socket```
-Then try again
-```./start.sh --seed```

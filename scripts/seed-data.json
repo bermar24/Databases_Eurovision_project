@@ -46,7 +46,7 @@
     {},
     {}
   ],
-  "_shows_comment": "3 shows: index 0 = Semi-Final 1, index 1 = Semi-Final 2, index 2 = Grand Final. Add showName/showDate fields once entity is extended.",
+  "_shows_comment": "3 shows: index 0 = Semi-Final 1, index 1 = Semi-Final 2, index 2 = Grand Final.+ Add showName/showDate fields once entity is extended.",
 
   "songs": [
     { "singerName": "Zoë Më",        "countryCode": "CH" },
