@@ -54,7 +54,7 @@ def post(base_url: str, path: str, payload: dict) -> dict:
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8")
         print(f"    ✗ HTTP {e.code} — {body[:200]}")
-        return {}
+        return None
 
 
 def wait_for_api(base_url: str, retries: int) -> bool:
@@ -116,7 +116,7 @@ def main():
                 continue
 
             result = post(base_url, endpoint, record)
-            if result:
+            if result is not None:
                 ok += 1
                 # Grab the ID field (varies by entity)
                 for id_field in ("userId", "songId", "showId", "scoreId", "voteLogId", "countryCode"):

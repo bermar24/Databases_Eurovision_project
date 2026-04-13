@@ -11,6 +11,7 @@ import java.util.List;
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class ShowResponseDTO {
     private Long showId;
+    private String showName;
     private List<Long> songIds;    // IDs of songs in this show
     private List<Long> adminIds;   // IDs of admins managing this show
     // TODO: add showName, showDate, showType when entity fields are added
