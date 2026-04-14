@@ -1,0 +1,473 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eurovision 2025 — Vote</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .points-grid {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+    }
+    .points-btn {
+      padding: 12px 4px;
+      border: 2px solid #2a2a6e;
+      border-radius: 8px;
+      background: #0a0a2e;
+      color: #aaa;
+      font-size: 1.1rem;
+      font-weight: 700;
+      cursor: pointer;
+      text-align: center;
+      transition: all 0.15s;
+    }
+    .points-btn:hover  { border-color: #f5c400; color: #f5c400; }
+    .points-btn.selected {
+      background: #f5c400;
+      border-color: #f5c400;
+      color: #0a0a2e;
+    }
+    .points-btn.douze { font-size: 1.3rem; }
+    .points-rule {
+      font-size: 0.78rem;
+      color: #666;
+      margin-top: 8px;
+      line-height: 1.5;
+    }
+    .voter-badge {
+      display: inline-block;
+      background: #1a1a6e;
+      border: 1px solid #2a2a6e;
+      border-radius: 20px;
+      padding: 4px 14px;
+      font-size: 0.8rem;
+      color: #aac4ff;
+      margin-bottom: 16px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">☆ Eurovision Song Contest ☆</div>
+  <div class="subtitle">Database Demo — DHBW Mosbach</div>
+</header>
+
+<nav>
+  <a href="index.html">Home</a>
+  <a href="vote.html" class="active">Vote</a>
+  <a href="scores.html">Scores</a>
+</nav>
+
+<main>
+
+  <!-- Step indicator -->
+  <div class="steps" id="stepIndicator">
+    <div class="step active" id="s1">1</div>
+    <div class="step-line"></div>
+    <div class="step" id="s2">2</div>
+    <div class="step-line"></div>
+    <div class="step" id="s3">3</div>
+  </div>
+
+  <!-- ── STEP 1: Voter identity ──────────────────────────────────── -->
+  <div id="step1" class="card">
+    <h2 id="step1Title">Who are you?</h2>
+    <div id="msgStep1" class="msg"></div>
+
+    <!-- JURY panel -->
+    <div id="juryPanel">
+      <div class="form-group">
+        <label>Select Jury Member</label>
+        <select id="jurySelect">
+          <option value="">Loading jury members...</option>
+        </select>
+      </div>
+      <div id="juryInfo" style="font-size:0.85rem;color:#aaa;margin-bottom:16px;min-height:20px;"></div>
+    </div>
+
+    <!-- CITIZEN panel -->
+    <div id="citizenPanel" style="display:none">
+      <div class="form-group">
+        <label>Your Name</label>
+        <input type="text" id="citizenName" placeholder="e.g. Anna Müller">
+      </div>
+      <div class="form-group">
+        <label>Your Country</label>
+        <select id="citizenCountry">
+          <option value="">Loading countries...</option>
+        </select>
+      </div>
+      <div id="citizenRegistered" style="display:none">
+        <div class="msg msg-success show" id="citizenConfirm"></div>
+      </div>
+    </div>
+
+    <button class="btn btn-primary" id="btnStep1">Continue →</button>
+  </div>
+
+  <!-- ── STEP 2: Show + Song + Points ───────────────────────────── -->
+  <div id="step2" class="card" style="display:none">
+    <h2>Select Show, Song &amp; Points</h2>
+    <div id="voterBadge" class="voter-badge"></div>
+    <div id="msgStep2" class="msg"></div>
+
+    <div class="form-group">
+      <label>Show</label>
+      <select id="showSelect">
+        <option value="">Loading shows...</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Song to vote for</label>
+      <select id="songSelect">
+        <option value="">Select a show first...</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Points to award</label>
+      <div class="points-grid" id="pointsGrid">
+        <!-- filled by JS -->
+      </div>
+      <p class="points-rule">
+        Eurovision scale — award exactly one value per vote.<br>
+        You cannot vote for your own country's song.
+      </p>
+    </div>
+
+    <button class="btn btn-primary" id="btnStep2">Cast Vote →</button>
+  </div>
+
+  <!-- ── STEP 3: Result ──────────────────────────────────────────── -->
+  <div id="step3" class="card" style="display:none">
+    <h2>Vote Cast! 🎉</h2>
+    <div class="msg msg-success show" id="voteResult"></div>
+
+    <div style="margin:20px 0;padding:20px;background:#0a0a2e;border-radius:8px;text-align:center;">
+      <div style="font-size:0.75rem;letter-spacing:2px;color:#aaa;text-transform:uppercase;margin-bottom:8px;">
+        Updated Score for this song
+      </div>
+      <div id="scoreValue" style="font-size:3.5rem;font-weight:900;color:#f5c400;line-height:1;"></div>
+      <div style="font-size:0.75rem;color:#666;margin-top:4px;">points</div>
+      <div id="scoreSong"  style="font-size:0.9rem;color:#aaa;margin-top:8px;"></div>
+    </div>
+
+    <a href="vote.html" class="btn btn-secondary btn-block">Vote Again</a>
+    <a href="scores.html" class="btn btn-primary btn-block" style="margin-top:10px;">
+      View Full Leaderboard →
+    </a>
+  </div>
+
+</main>
+
+<script>
+  const API = 'http://localhost:8080/api';
+
+  // ── URL param: ?type=jury or ?type=citizen ──────────────────────────
+  const voteType = new URLSearchParams(window.location.search).get('type') || 'jury';
+
+  // State
+  let voterId         = null;
+  let voterCountry    = null;   // to enforce no-own-country rule in UI
+  let selectedPoints  = null;
+  let citizenRegistered = false;
+
+  const POINTS = [12, 10, 8, 7, 6, 5, 4, 3, 2, 1];
+
+  // ── Build points grid ───────────────────────────────────────────────
+  function buildPointsGrid() {
+    const grid = document.getElementById('pointsGrid');
+    grid.innerHTML = '';
+    POINTS.forEach(p => {
+      const btn = document.createElement('button');
+      btn.className = 'points-btn' + (p === 12 ? ' douze' : '');
+      btn.textContent = p === 12 ? '12 ★' : p;
+      btn.dataset.points = p;
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.points-btn').forEach(b => b.classList.remove('selected'));
+        btn.classList.add('selected');
+        selectedPoints = p;
+        hideMsg(document.getElementById('msgStep2'));
+      });
+      grid.appendChild(btn);
+    });
+  }
+
+  // ── Init ────────────────────────────────────────────────────────────
+  function init() {
+    buildPointsGrid();
+    if (voteType === 'jury') {
+      document.getElementById('step1Title').textContent = '🎼 Select Jury Member';
+      document.getElementById('citizenPanel').style.display = 'none';
+      document.getElementById('juryPanel').style.display    = 'block';
+      loadJury();
+    } else {
+      document.getElementById('step1Title').textContent = '🗳️ Register as Citizen';
+      document.getElementById('juryPanel').style.display    = 'none';
+      document.getElementById('citizenPanel').style.display = 'block';
+      loadCountries();
+    }
+    loadShows();
+  }
+
+  // ── Loaders ─────────────────────────────────────────────────────────
+  async function loadJury() {
+    const sel = document.getElementById('jurySelect');
+    try {
+      const data = await apiFetch('/jury');
+      sel.innerHTML = '<option value="">— pick a jury member —</option>';
+      data.forEach(j => {
+        const opt = document.createElement('option');
+        opt.value = j.userId;
+        opt.textContent = `Jury #${j.userId} — ${j.countryCode}  (${j.professionalBg || 'n/a'})`;
+        opt.dataset.country = j.countryCode;
+        opt.dataset.bg = j.professionalBg || '';
+        sel.appendChild(opt);
+      });
+      sel.addEventListener('change', () => {
+        const opt = sel.selectedOptions[0];
+        if (opt && opt.value) {
+          document.getElementById('juryInfo').textContent =
+            `Country: ${opt.dataset.country}  ·  Background: ${opt.dataset.bg}`;
+          voterCountry = opt.dataset.country;
+        } else {
+          document.getElementById('juryInfo').textContent = '';
+          voterCountry = null;
+        }
+        // Grey out songs from same country
+        filterOwnCountrySongs();
+      });
+    } catch(e) {
+      sel.innerHTML = '<option>Error loading jury — is the API running?</option>';
+    }
+  }
+
+  async function loadCountries() {
+    const sel = document.getElementById('citizenCountry');
+    try {
+      const data = await apiFetch('/countries');
+      sel.innerHTML = '<option value="">— select your country —</option>';
+      data.forEach(c => {
+        const opt = document.createElement('option');
+        opt.value = c.countryCode;
+        opt.textContent = `${c.countryName} (${c.countryCode})`;
+        sel.appendChild(opt);
+      });
+      sel.addEventListener('change', () => {
+        voterCountry = sel.value || null;
+        filterOwnCountrySongs();
+      });
+    } catch(e) {
+      sel.innerHTML = '<option>Error loading countries</option>';
+    }
+  }
+
+  async function loadShows() {
+    const sel = document.getElementById('showSelect');
+    try {
+      const data = await apiFetch('/shows');
+      sel.innerHTML = '<option value="">— select a show —</option>';
+      data.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.showId;
+        opt.textContent = s.showName || `Show #${s.showId}`;
+        opt.dataset.songIds = JSON.stringify(s.songIds || []);
+        sel.appendChild(opt);
+      });
+    } catch(e) {
+      sel.innerHTML = '<option>Error loading shows</option>';
+    }
+  }
+
+  async function loadSongsForShow(showId, songIds) {
+    const sel = document.getElementById('songSelect');
+    sel.innerHTML = '<option>Loading songs...</option>';
+    try {
+      const allSongs = await apiFetch('/songs');
+      // Filter to songs in this show if songIds is available
+      const inShow = (songIds && songIds.length > 0)
+        ? allSongs.filter(s => songIds.includes(s.songId))
+        : allSongs;
+
+      sel.innerHTML = '<option value="">— select a song —</option>';
+      inShow.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.songId;
+        opt.textContent = `${s.singerName} (${s.countryCode})`;
+        opt.dataset.country = s.countryCode;
+        sel.appendChild(opt);
+      });
+      filterOwnCountrySongs();
+    } catch(e) {
+      sel.innerHTML = '<option>Error loading songs</option>';
+    }
+  }
+
+  // Disable/mark songs from voter's own country
+  function filterOwnCountrySongs() {
+    const sel = document.getElementById('songSelect');
+    Array.from(sel.options).forEach(opt => {
+      if (opt.dataset.country && voterCountry &&
+          opt.dataset.country === voterCountry) {
+        opt.disabled = true;
+        opt.textContent = opt.textContent.replace(' ★ own country', '') + ' ★ own country';
+      } else if (opt.dataset.country) {
+        opt.disabled = false;
+        opt.textContent = opt.textContent.replace(' ★ own country', '');
+      }
+    });
+  }
+
+  // ── Show dropdown → load songs ─────────────────────────────────────
+  document.getElementById('showSelect').addEventListener('change', function() {
+    if (this.value) {
+      const opt = this.selectedOptions[0];
+      let songIds = [];
+      try { songIds = JSON.parse(opt.dataset.songIds || '[]'); } catch(e) {}
+      loadSongsForShow(this.value, songIds);
+    } else {
+      document.getElementById('songSelect').innerHTML =
+        '<option value="">Select a show first...</option>';
+    }
+  });
+
+  // ── Step 1 button ──────────────────────────────────────────────────
+  document.getElementById('btnStep1').addEventListener('click', async () => {
+    const msg = document.getElementById('msgStep1');
+
+    if (voteType === 'jury') {
+      const sel = document.getElementById('jurySelect');
+      if (!sel.value) { showMsg(msg, 'error', 'Please select a jury member.'); return; }
+      voterId      = parseInt(sel.value);
+      voterCountry = sel.selectedOptions[0].dataset.country;
+      document.getElementById('voterBadge').textContent =
+        `🎼 Jury #${voterId} — ${voterCountry}`;
+      goToStep(2);
+
+    } else {
+      if (!citizenRegistered) {
+        const name    = document.getElementById('citizenName').value.trim();
+        const country = document.getElementById('citizenCountry').value;
+        if (!name)    { showMsg(msg, 'error', 'Please enter your name.'); return; }
+        if (!country) { showMsg(msg, 'error', 'Please select your country.'); return; }
+
+        showMsg(msg, 'info', 'Registering...');
+        try {
+          const result = await apiPost('/citizens', { countryCode: country });
+          voterId = result.userId;
+          voterCountry = country;
+          citizenRegistered = true;
+          document.getElementById('citizenRegistered').style.display = 'block';
+          document.getElementById('citizenConfirm').textContent =
+            `✓ Registered: ${name} from ${country} — Citizen ID: ${voterId}`;
+          document.getElementById('citizenName').disabled    = true;
+          document.getElementById('citizenCountry').disabled = true;
+          hideMsg(msg);
+          document.getElementById('voterBadge').textContent =
+            `🗳️ Citizen #${voterId} — ${country}`;
+          goToStep(2);
+        } catch(e) {
+          showMsg(msg, 'error', 'Registration failed: ' + e.message);
+        }
+      } else {
+        goToStep(2);
+      }
+    }
+  });
+
+  // ── Step 2 button — cast vote ──────────────────────────────────────
+  document.getElementById('btnStep2').addEventListener('click', async () => {
+    const msg    = document.getElementById('msgStep2');
+    const showId = document.getElementById('showSelect').value;
+    const songSel = document.getElementById('songSelect');
+    const songId = songSel.value;
+
+    if (!showId)       { showMsg(msg, 'error', 'Please select a show.'); return; }
+    if (!songId)       { showMsg(msg, 'error', 'Please select a song.'); return; }
+    if (!selectedPoints){ showMsg(msg, 'error', 'Please select the points to award.'); return; }
+
+    // Client-side own-country check (also enforced server-side)
+    const songCountry = songSel.selectedOptions[0]?.dataset.country;
+    if (songCountry && voterCountry && songCountry === voterCountry) {
+      showMsg(msg, 'error',
+        `You cannot vote for your own country (${voterCountry}). Please select a different song.`);
+      return;
+    }
+
+    showMsg(msg, 'info', 'Casting vote...');
+
+    try {
+      const payload = {
+        songId: parseInt(songId),
+        points: selectedPoints
+      };
+      if (voteType === 'jury') payload.juryId    = voterId;
+      else                     payload.citizenId = voterId;
+
+      await apiPost('/votes', payload);
+
+      // Recalculate score immediately after voting
+      const score = await apiPost(`/scores/calculate/${songId}`, {});
+
+      const songName = songSel.selectedOptions[0].textContent;
+      document.getElementById('voteResult').textContent =
+        `✓ ${selectedPoints} point${selectedPoints > 1 ? 's' : ''} awarded to "${songName}"`;
+      document.getElementById('scoreValue').textContent = score.songScore;
+      document.getElementById('scoreSong').textContent  = songName;
+
+      goToStep(3);
+    } catch(e) {
+      showMsg(msg, 'error', 'Vote failed: ' + e.message);
+    }
+  });
+
+  // ── Helpers ────────────────────────────────────────────────────────
+  async function apiFetch(path) {
+    const r = await fetch(API + path);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+  }
+
+  async function apiPost(path, body) {
+    const r = await fetch(API + path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
+    });
+    if (!r.ok) {
+      const txt = await r.text();
+      throw new Error(txt || `HTTP ${r.status}`);
+    }
+    const txt = await r.text();
+    return txt ? JSON.parse(txt) : {};
+  }
+
+  function showMsg(el, type, text) {
+    el.className = `msg msg-${type} show`;
+    el.textContent = text;
+  }
+  function hideMsg(el) {
+    el.className = 'msg';
+    el.textContent = '';
+  }
+
+  function goToStep(n) {
+    [1,2,3].forEach(i => {
+      document.getElementById(`step${i}`).style.display = 'none';
+      const dot = document.getElementById(`s${i}`);
+      dot.className = i < n ? 'step done' : i === n ? 'step active' : 'step';
+    });
+    document.getElementById(`step${n}`).style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+  init();
+</script>
+
+</body>
+</html>

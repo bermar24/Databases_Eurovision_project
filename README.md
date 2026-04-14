@@ -118,7 +118,7 @@ For each voting group, points are assigned as follows:
 # Run on Linux/MacOS
 ```chmod +x start.sh```
  
-```./start.sh --seed```
+```./start.sh --seed --frontend```
 
 ## using Parrot OS
 Start the Podman socket (needed once per session) before running the script:
@@ -131,7 +131,7 @@ Prerequisites (Windows)
 
 How to run (Command Prompt or PowerShell)
 bat:: Start + seed
-```start.bat --seed```
+```start.bat --seed --frontend```
 
 :: Stop containers
 ```start.bat --stop```

@@ -46,7 +46,6 @@
     { "showName": "Semi-Final 2" },
     { "showName": "Grand Final" }
   ],
-  "_shows_comment": "3 shows: index 0 = Semi-Final 1, index 1 = Semi-Final 2, index 2 = Grand Final.+ Add showName/showDate fields once entity is extended.",
 
   "songs": [
     { "singerName": "Zoë Më",        "countryCode": "CH" },
@@ -83,8 +82,24 @@
     { "singerName": "PARG",          "countryCode": "AM" },
     { "singerName": "Mariam Bigvava","countryCode": "GE" },
     { "singerName": "Mamagama",      "countryCode": "AZ" },
-    { "singerName": "Go_A",          "countryCode": "RS" }
+    { "singerName": "Go_A",          "countryCode": "RS" },
+    { "singerName": "Hurricanes",         "countryCode": "SK" },
+    { "singerName": "Benson Boom",        "countryCode": "HU" }
   ],
+
+  "_show_assignments_comment": [
+    "show index 0 = Semi-Final 1, index 1 = Semi-Final 2, index 2 = Grand Final.",
+    "Big 5 (FR,DE,IT,ES,GB) + host (CH) go directly to Grand Final.",
+    "Remaining 31 countries split across the two semi-finals.",
+    "Semi-Final 1: NO,UA,IL,FI,AT,NL,BE,PT,LV,LT,MT,IE,AM,GE,DK,ME",
+    "Semi-Final 2: SE,HR,IS,EE,PL,CZ,SI,AL,SM,CY,GR,AZ,RS,SK,HU",
+    "Grand Final: CH,FR,DE,IT,ES,GB + 10 qualifiers from each semi (seeded as all songs for demo)"
+  ],
+  "show_assignments": {
+    "Semi-Final 1": ["NO","UA","IL","FI","AT","NL","BE","PT","LV","LT","MT","IE","AM","GE","DK","ME"],
+    "Semi-Final 2": ["SE","HR","IS","EE","PL","CZ","SI","AL","SM","CY","GR","AZ","RS","SK","HU"],
+    "Grand Final":  ["CH","FR","DE","IT","ES","GB","NO","UA","IL","FI","AT","NL","BE","PT","LV","LT","MT","IE","AM","GE","DK","ME","SE","HR","IS","EE","PL","CZ","SI","AL","SM","CY","GR","AZ","RS","SK","HU"]
+  },
 
   "admins": [
     { "countryCode": "CH", "adminLevel": 1 },

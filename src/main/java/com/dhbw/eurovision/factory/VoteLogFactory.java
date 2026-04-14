@@ -15,26 +15,22 @@ import org.springframework.stereotype.Component;
 @Component
 public class VoteLogFactory {
 
-    /**
-     * Build a VoteLog entity.
-     * Exactly one of jury / citizen must be non-null — validated in VoteLogService.
-     */
     public VoteLog toEntity(VoteLogRequestDTO dto, Song song, Jury jury, Citizen citizen) {
         VoteLog voteLog = new VoteLog();
         voteLog.setSong(song);
         voteLog.setJury(jury);
         voteLog.setCitizen(citizen);
-        // TODO: set points once VoteLog.points field is added
+        voteLog.setPoints(dto.getPoints());
         return voteLog;
     }
 
-    /** Convert a persisted VoteLog entity to a response DTO. */
     public VoteLogResponseDTO toResponseDTO(VoteLog voteLog) {
         return new VoteLogResponseDTO(
                 voteLog.getVoteLogId(),
                 voteLog.getSong() != null ? voteLog.getSong().getSongId() : null,
                 voteLog.getJury() != null ? voteLog.getJury().getUserId() : null,
-                voteLog.getCitizen() != null ? voteLog.getCitizen().getUserId() : null
+                voteLog.getCitizen() != null ? voteLog.getCitizen().getUserId() : null,
+                voteLog.getPoints()
         );
     }
 }

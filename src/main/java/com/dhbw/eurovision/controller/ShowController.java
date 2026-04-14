@@ -26,7 +26,7 @@ public class ShowController {
     /** GET /api/shows */
     @GetMapping
     public ResponseEntity<List<ShowResponseDTO>> getAllShows() {
-        return ResponseEntity.ok(showService.getAllShows());
+return ResponseEntity.ok(showService.getAllShows());
     }
 
     /** GET /api/shows/{id} */
@@ -39,6 +39,17 @@ public class ShowController {
     @PostMapping
     public ResponseEntity<ShowResponseDTO> createShow(@RequestBody ShowRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED).body(showService.createShow(dto));
+    }
+
+    /**
+     * POST /api/shows/{showId}/songs/{songId}
+     * Assign a song to a show (show_song M:N join table).
+     */
+    @PostMapping("/{showId}/songs/{songId}")
+    public ResponseEntity<ShowResponseDTO> addSongToShow(
+            @PathVariable Long showId,
+            @PathVariable Long songId) {
+        return ResponseEntity.ok(showService.addSongToShow(showId, songId));
     }
 
     /** DELETE /api/shows/{id} */

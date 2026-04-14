@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eurovision 2025 — Demo</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .hero {
+      text-align: center;
+      padding: 50px 20px 30px;
+    }
+    .hero .year {
+      font-size: 5rem;
+      font-weight: 900;
+      color: #f5c400;
+      line-height: 1;
+      text-shadow: 0 0 40px rgba(245,196,0,0.4);
+    }
+    .hero .tagline {
+      font-size: 1rem;
+      color: #aaa;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      margin-top: 8px;
+    }
+    .hero .location {
+      font-size: 0.85rem;
+      color: #666;
+      margin-top: 6px;
+      letter-spacing: 2px;
+    }
+    .section-title {
+      text-align: center;
+      font-size: 0.8rem;
+      letter-spacing: 3px;
+      text-transform: uppercase;
+      color: #aaa;
+      margin-bottom: 20px;
+    }
+    .scores-link {
+      text-align: center;
+      margin-top: 30px;
+    }
+    .api-status {
+      text-align: center;
+      font-size: 0.8rem;
+      margin-top: 30px;
+      color: #666;
+    }
+    .dot {
+      display: inline-block;
+      width: 8px; height: 8px;
+      border-radius: 50%;
+      background: #666;
+      margin-right: 6px;
+      vertical-align: middle;
+    }
+    .dot.online  { background: #2ecc71; box-shadow: 0 0 6px #2ecc71; }
+    .dot.offline { background: #e74c3c; }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">☆ Eurovision Song Contest ☆</div>
+  <div class="subtitle">Database Demo — DHBW Mosbach</div>
+</header>
+
+<nav>
+  <a href="index.html" class="active">Home</a>
+  <a href="vote.html">Vote</a>
+  <a href="scores.html">Scores</a>
+</nav>
+
+<main>
+  <div class="hero">
+    <div class="year">2025</div>
+    <div class="tagline">United by Music</div>
+    <div class="location">Basel, Switzerland</div>
+  </div>
+
+  <p class="section-title">— Cast your vote —</p>
+
+  <div class="vote-options">
+    <a href="vote.html?type=jury" class="vote-card">
+      <div class="icon">🎼</div>
+      <h3>Vote as Jury</h3>
+      <p>Select an existing jury member from the database and cast a professional vote</p>
+    </a>
+    <a href="vote.html?type=citizen" class="vote-card">
+      <div class="icon">🗳️</div>
+      <h3>Vote as Citizen</h3>
+      <p>Register as a new citizen voter, choose your country and cast a public vote</p>
+    </a>
+  </div>
+
+  <div class="scores-link">
+    <a href="scores.html" class="btn btn-secondary">📊 View Leaderboard</a>
+  </div>
+
+  <div class="api-status">
+    <span class="dot" id="statusDot"></span>
+    <span id="statusText">Checking API...</span>
+  </div>
+</main>
+
+<script>
+  const API = 'http://localhost:8080/api';
+
+  async function checkApi() {
+    const dot  = document.getElementById('statusDot');
+    const text = document.getElementById('statusText');
+    try {
+      const r = await fetch(`${API}/countries`);
+      if (r.ok) {
+        dot.className  = 'dot online';
+        text.textContent = 'API connected — http://localhost:8080';
+      } else {
+        throw new Error();
+      }
+    } catch {
+      dot.className  = 'dot offline';
+      text.textContent = 'API offline — start with ./start.sh --seed';
+    }
+  }
+
+  checkApi();
+</script>
+
+</body>
+</html>
