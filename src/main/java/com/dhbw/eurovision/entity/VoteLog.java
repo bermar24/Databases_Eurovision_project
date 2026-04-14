@@ -5,48 +5,48 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
+import java.util.Set;
+
 /**
  * EERM Entity: Vote_Log
- * Associative entity for the "Votes" M:N diamond between
- * (Jury or Citizen) and Song.
+ * One row = one vote cast by a Jury member or Citizen for a Song.
  *
- * One row = one vote cast.
- * Either jury_id OR citizen_id will be set, not both
- * (depending on whether it's a jury or public vote).
+ * Eurovision points scale: 12, 10, 8, 7, 6, 5, 4, 3, 2, 1
+ * Constraint: voter's country != song's country (no own-country vote).
+ * Constraint: exactly one of jury_id / citizen_id must be non-null.
  */
 @Entity
 @Table(name = "vote_log")
 @Getter @Setter @NoArgsConstructor
 public class VoteLog {
 
+    /** Valid Eurovision point values */
+    public static final Set<Integer> VALID_POINTS = Set.of(12, 10, 8, 7, 6, 5, 4, 3, 2, 1);
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "vote_log_id")
     private Long voteLogId;
 
-    // TODO: add a points/value field once your team agrees on voting rules
-    // @Column(name = "points", nullable = false)
-    // private Integer points;
+    /**
+     * Points awarded — must be one of: 12, 10, 8, 7, 6, 5, 4, 3, 2, 1
+     * Validated in VoteLogService before persisting.
+     */
+    @Column(name = "points", nullable = false)
+    private Integer points;
 
     // --- Relationships ---
 
-    /** The song this vote is for */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "song_id", nullable = false)
     private Song song;
 
-    /**
-     * The Jury voter — null when this is a citizen vote.
-     * Constraint: exactly one of jury / citizen must be non-null.
-     */
+    /** Set when this is a jury vote; null for citizen votes. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "jury_id")
     private Jury jury;
 
-    /**
-     * The Citizen voter — null when this is a jury vote.
-     * Constraint: exactly one of jury / citizen must be non-null.
-     */
+    /** Set when this is a citizen/televote; null for jury votes. */
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "citizen_id")
     private Citizen citizen;

@@ -3,11 +3,12 @@
 Eurovision 2025 — Database Seed Script
 =======================================
 Reads scripts/seed-data.json and POSTs each record to the Spring Boot REST API.
+Also handles show-song assignments via POST /api/shows/{showId}/songs/{songId}.
 
 Usage:
     python3 scripts/seed.py [--host http://localhost:8080] [--retries 20]
 
-Requirements: Python 3.7+ (no extra packages needed — uses stdlib only)
+Requirements: Python 3.7+ (uses stdlib only)
 """
 
 import json
@@ -36,14 +37,13 @@ ENDPOINTS = {
 SEED_ORDER = ["countries", "shows", "songs", "admins", "jury", "citizens"]
 
 
-# ── Helpers ──────────────────────────────────────────────────────────────────
+# ── HTTP Helpers ──────────────────────────────────────────────────────────────────
 
-def post(base_url: str, path: str, payload: dict) -> dict:
+def post(base_url: str, path: str, payload: dict):
     url = base_url + path
     data = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
-        url,
-        data=data,
+        url, data=data,
         headers={"Content-Type": "application/json"},
         method="POST",
     )
@@ -53,12 +53,22 @@ def post(base_url: str, path: str, payload: dict) -> dict:
             return json.loads(body) if body.strip() else {}
     except urllib.error.HTTPError as e:
         body = e.read().decode("utf-8")
-        print(f"    ✗ HTTP {e.code} — {body[:200]}")
+        print(f"    ✗ HTTP {e.code} — {body[:300]}")
+        return None
+
+
+def get(base_url: str, path: str):
+    url = base_url + path
+    req = urllib.request.Request(url, method="GET")
+    try:
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            return json.loads(resp.read().decode("utf-8"))
+    except Exception as e:
+        print(f"    ✗ GET {path} failed: {e}")
         return None
 
 
 def wait_for_api(base_url: str, retries: int) -> bool:
-    """Poll /api/countries until Spring Boot is ready."""
     print(f"⏳  Waiting for API at {base_url} ...")
     for attempt in range(1, retries + 1):
         try:
@@ -77,10 +87,9 @@ def wait_for_api(base_url: str, retries: int) -> bool:
 
 def main():
     parser = argparse.ArgumentParser(description="Seed the Eurovision DB via REST API")
-    parser.add_argument("--host",    default="http://localhost:8080", help="Base URL of the Spring Boot app")
-    parser.add_argument("--retries", type=int, default=20,            help="How many times to retry waiting for the API")
+    parser.add_argument("--host",    default="http://localhost:8080")
+    parser.add_argument("--retries", type=int, default=20)
     args = parser.parse_args()
-
     base_url = args.host.rstrip("/")
 
     # ── Load seed file ───────────────────────────────────────────────────────
@@ -97,7 +106,7 @@ def main():
         sys.exit(1)
 
     # ── Seed each collection in order ────────────────────────────────────────
-    created_ids = {}   # store returned IDs for cross-references
+    created_ids = {}   # key -> list of IDs returned from API
 
     for key in SEED_ORDER:
         records = data.get(key, [])
@@ -111,10 +120,8 @@ def main():
         ok = 0
 
         for i, record in enumerate(records):
-            # Skip comment keys (start with _)
             if not isinstance(record, dict):
                 continue
-
             result = post(base_url, endpoint, record)
             if result is not None:
                 ok += 1
@@ -129,16 +136,57 @@ def main():
         created_ids[key] = ids
         print(f"    ✔  {ok}/{len(records)} created\n")
 
+    # ── Show-song assignments ────────────────────────────────────────────
+    assignments = data.get("show_assignments")
+    if assignments:
+        print("🎭  Assigning songs to shows ...")
+
+        # Fetch current shows and songs from API to get their IDs
+        shows = get(base_url, "/api/shows") or []
+        songs = get(base_url, "/api/songs") or []
+
+        # Build lookup maps: name -> id and countryCode -> songId
+        show_map = {s["showName"]: s["showId"] for s in shows}
+        song_map = {s["countryCode"]: s["songId"] for s in songs}
+
+        total_ok = 0
+        total_fail = 0
+
+        for show_name, country_codes in assignments.items():
+            show_id = show_map.get(show_name)
+            if not show_id:
+                print(f"    ⚠️  Show '{show_name}' not found in DB — skipping")
+                continue
+
+            print(f"    📺  {show_name} (id={show_id}) — {len(country_codes)} songs")
+            for code in country_codes:
+                song_id = song_map.get(code)
+                if not song_id:
+                    print(f"        ⚠️  No song found for country {code}")
+                    total_fail += 1
+                    continue
+                result = post(base_url, f"/api/shows/{show_id}/songs/{song_id}", {})
+                if result is not None:
+                    total_ok += 1
+                else:
+                    total_fail += 1
+
+        print(f"    ✔  {total_ok} assignments done, {total_fail} failed\n")
+
     # ── Summary ──────────────────────────────────────────────────────────────
     print("=" * 50)
     print("🎉  Seed complete! Summary:")
     for key in SEED_ORDER:
         ids = created_ids.get(key, [])
         print(f"   {key:12s}: {len(ids)} records")
-    print("=" * 50)
+    if assignments:
+        total = sum(len(v) for v in assignments.values())
+        print(f"   {'show_songs':12s}: {total} assignments")
+    print("=" * 55)
     print(f"\n🌐  API is live at {base_url}")
     print(f"    Countries : {base_url}/api/countries")
     print(f"    Songs     : {base_url}/api/songs")
+    print(f"    Shows     : {base_url}/api/shows")
     print(f"    Scores    : {base_url}/api/scores")
     print(f"    Votes     : {base_url}/api/votes")
 

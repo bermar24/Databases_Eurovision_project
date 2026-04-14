@@ -12,5 +12,5 @@ public class VoteLogResponseDTO {
     private Long songId;
     private Long juryId;      // null if citizen vote
     private Long citizenId;   // null if jury vote
-    // TODO: add Integer points when the field is added to VoteLog entity
+    private Integer points;      // 12, 10, 8, 7, 6, 5, 4, 3, 2, or 1
 }

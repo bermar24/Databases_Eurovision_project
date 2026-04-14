@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Eurovision 2025 — Scores</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .toolbar {
+      display: flex;
+      gap: 12px;
+      align-items: flex-end;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    .toolbar .form-group { flex: 1; min-width: 200px; margin: 0; }
+    .total-votes {
+      font-size: 0.8rem;
+      color: #aaa;
+      text-align: right;
+      margin-bottom: 10px;
+    }
+    .no-scores {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+      font-size: 0.9rem;
+    }
+    .recalc-bar {
+      background: #111133;
+      border: 1px solid #2a2a6e;
+      border-radius: 8px;
+      padding: 14px 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 20px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .recalc-bar span {
+      font-size: 0.85rem;
+      color: #aaa;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="logo">☆ Eurovision Song Contest ☆</div>
+  <div class="subtitle">Database Demo — DHBW Mosbach</div>
+</header>
+
+<nav>
+  <a href="index.html">Home</a>
+  <a href="vote.html">Vote</a>
+  <a href="scores.html" class="active">Scores</a>
+</nav>
+
+<main>
+
+  <!-- Recalculate all bar -->
+  <div class="recalc-bar">
+    <span>Scores are calculated from the vote_log table in real time.</span>
+    <button class="btn btn-secondary" id="btnRecalcAll" style="padding:8px 18px;font-size:0.85rem;">
+      ↻ Recalculate All
+    </button>
+  </div>
+
+  <div class="card">
+    <h2>🏆 Leaderboard</h2>
+
+    <div class="toolbar">
+      <div class="form-group">
+        <label>Filter by Show</label>
+        <select id="showFilter">
+          <option value="">All Shows</option>
+        </select>
+      </div>
+      <button class="btn btn-primary" id="btnRefresh" style="padding:10px 20px;">
+        ↻ Refresh
+      </button>
+    </div>
+
+    <div id="msgScores" class="msg"></div>
+    <div class="total-votes" id="totalInfo"></div>
+
+    <div id="tableContainer">
+      <div class="loading">Loading scores</div>
+    </div>
+  </div>
+
+  <!-- Songs without scores -->
+  <div class="card" id="unscored" style="display:none">
+    <h2>Songs with no votes yet</h2>
+    <div id="unscoredList"></div>
+  </div>
+
+</main>
+
+<script>
+  const API = 'http://localhost:8080/api';
+
+  async function apiFetch(path) {
+    const r = await fetch(API + path);
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+  }
+
+  async function apiPost(path) {
+    const r = await fetch(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    return r.json();
+  }
+
+  function showMsg(type, text) {
+    const el = document.getElementById('msgScores');
+    el.className = `msg msg-${type} show`;
+    el.textContent = text;
+    if (type !== 'error') setTimeout(() => el.className = 'msg', 3000);
+  }
+
+  // ── Load shows into filter dropdown ──────────────────────────────────
+  async function loadShows() {
+    try {
+      const shows = await apiFetch('/shows');
+      const sel = document.getElementById('showFilter');
+      shows.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.showId;
+        opt.textContent = s.showName || `Show #${s.showId}`;
+        sel.appendChild(opt);
+      });
+    } catch(e) { /* silently ignore */ }
+  }
+
+  // ── Load and render leaderboard ───────────────────────────────────────
+  async function loadScores() {
+    const container = document.getElementById('tableContainer');
+    const totalInfo = document.getElementById('totalInfo');
+    container.innerHTML = '<div class="loading">Loading scores</div>';
+    totalInfo.textContent = '';
+
+    try {
+      const [scores, songs, votes] = await Promise.all([
+        apiFetch('/scores'),
+        apiFetch('/songs'),
+        apiFetch('/votes')
+      ]);
+
+      // Build song lookup
+      const songMap = {};
+      songs.forEach(s => { songMap[s.songId] = s; });
+
+      // Sort scores descending
+      const sorted = [...scores].sort((a, b) => b.songScore - a.songScore);
+
+      totalInfo.textContent = `${votes.length} total votes · ${scores.length} songs scored`;
+
+      if (sorted.length === 0) {
+        container.innerHTML = '<div class="no-scores">No scores yet — cast some votes first!</div>';
+        return;
+      }
+
+      // Build table
+      const table = document.createElement('table');
+      table.innerHTML = `
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>Singer</th>
+            <th>Country</th>
+            <th>Score</th>
+          </tr>
+        </thead>`;
+
+      const tbody = document.createElement('tbody');
+      sorted.forEach((score, idx) => {
+        const rank = idx + 1;
+        const song = songMap[score.songId] || {};
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td class="rank rank-${rank}">${rank}</td>
+          <td>${song.singerName || '—'}</td>
+          <td>${song.countryCode || '—'}</td>
+          <td><span class="score-badge">${score.songScore}</span></td>`;
+        tbody.appendChild(tr);
+      });
+
+      table.appendChild(tbody);
+      container.innerHTML = '';
+      container.appendChild(table);
+
+      // Show unscored songs
+      const scoredIds = new Set(scores.map(s => s.songId));
+      const unscored  = songs.filter(s => !scoredIds.has(s.songId));
+      const box = document.getElementById('unscored');
+      if (unscored.length > 0) {
+        box.style.display = 'block';
+        document.getElementById('unscoredList').innerHTML =
+          unscored.map(s => `<div style="padding:6px 0;border-bottom:1px solid #1a1a4e;color:#aaa;">${s.singerName} <span style="color:#666">(${s.countryCode})</span></div>`).join('');
+      } else {
+        box.style.display = 'none';
+      }
+
+    } catch(e) {
+      container.innerHTML = `<div class="msg msg-error show">Failed to load scores: ${e.message}<br>Make sure the API is running at ${API}</div>`;
+    }
+  }
+
+  // ── Recalculate all scores ────────────────────────────────────────────
+  document.getElementById('btnRecalcAll').addEventListener('click', async () => {
+    const btn = document.getElementById('btnRecalcAll');
+    btn.disabled = true;
+    btn.textContent = 'Recalculating...';
+    try {
+      await apiPost('/scores/calculate-all');
+      showMsg('success', '✓ All scores recalculated from vote_log table.');
+      await loadScores();
+    } catch(e) {
+      showMsg('error', 'Recalculation failed: ' + e.message);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = '↻ Recalculate All';
+    }
+  });
+
+  // ── Refresh button ────────────────────────────────────────────────────
+  document.getElementById('btnRefresh').addEventListener('click', loadScores);
+
+  // ── Init ──────────────────────────────────────────────────────────────
+  loadShows();
+  loadScores();
+</script>
+
+</body>
+</html>
