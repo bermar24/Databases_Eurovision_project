@@ -17,7 +17,7 @@ import java.util.List;
  *   Show (M) <-> Song  (M)   — songs that compete in this show (show_song join table)
  */
 @Entity
-@Table(name = "show")
+@Table(name = "shows")
 @Getter @Setter @NoArgsConstructor
 public class Show {
 
