@@ -39,6 +39,7 @@ erDiagram
 
     VOTE_LOG {
         bigint vote_log_id  PK  "AUTO_INCREMENT"
+        int    points           "Eurovision scale: 12,10,8,7,6,5,4,3,2,1 — NOT NULL"
         bigint song_id       FK "FK → song — NOT NULL"
         bigint jury_id       FK "FK → jury — nullable (jury vote)"
         bigint citizen_id    FK "FK → citizen — nullable (public vote)"

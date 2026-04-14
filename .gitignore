@@ -1,6 +1,6 @@
 # Default ignored files
 /shelf/
-/workspace.xml
+/.idea/workspace.xml
 # Editor-based HTTP Client requests
 /httpRequests/
 # Ignored default folder with query files
@@ -10,3 +10,11 @@
 /dataSources.local.xml
 #idea
 .idea/
+# Logs
+*.log
+logs/
+
+# Docker / environment
+.env
+.env.local
+docker/mysql-data/
