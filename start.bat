@@ -9,6 +9,7 @@ setlocal EnableDelayedExpansion
 ::  --reset  : tear down containers + wipe DB volume before starting fresh
 ::  --stop   : stop and remove all containers (keeps DB volume)
 ::  --logs   : tail logs after startup instead of returning to shell
+::  --frontend : also start the frontend dev server on http://localhost:3000
 ::
 ::  Requirements: Docker Desktop running, Python 3 installed
 :: =============================================================================
@@ -18,12 +19,14 @@ set DO_SEED=false
 set DO_RESET=false
 set DO_STOP=false
 set DO_LOGS=false
+set DO_FRONTEND=false
 
 for %%A in (%*) do (
     if "%%A"=="--seed"  set DO_SEED=true
     if "%%A"=="--reset" set DO_RESET=true
     if "%%A"=="--stop"  set DO_STOP=true
     if "%%A"=="--logs"  set DO_LOGS=true
+    if "%%A"=="--frontend" set DO_FRONTEND=true
 )
 
 :: ── Check we are in the project root ─────────────────────────────────────────
@@ -73,9 +76,11 @@ echo [OK]    All dependencies found
 if "%DO_STOP%"=="true" (
     echo [INFO]  Stopping containers...
     docker compose down
-    echo [OK]    Containers stopped. DB volume preserved.
-    echo         Use --reset to wipe the database volume.
-    exit /b 0
+   echo [INFO]  Stopping frontend server if running...
+       taskkill /FI "WINDOWTITLE eq Eurovision Frontend*" /F >nul 2>&1
+       echo [OK]    All services stopped. DB volume preserved.
+       echo         Use --reset to wipe the database volume.
+       exit /b 0
 )
 
 :: ── --reset ──────────────────────────────────────────────────────────────────
@@ -100,9 +105,6 @@ if not exist "mvnw" (
     echo           curl https://start.spring.io/starter.zip -d type=maven-project -d dependencies=web -d javaVersion=17 -o tmp.zip
     echo           tar -xf tmp.zip mvnw mvnw.cmd .mvn/
     echo           del tmp.zip
-    echo.
-    echo         OR open https://start.spring.io in your browser, generate a Maven
-    echo         project, unzip it, and copy mvnw, mvnw.cmd and .mvn\ here.
     echo.
     set /p CONFIRM="Continue anyway? Docker build will fail. [y/N] "
     if /i "!CONFIRM!" neq "y" exit /b 1
@@ -167,26 +169,49 @@ if "%DO_SEED%"=="true" (
     )
 )
 
+
+:: ── Frontend server ───────────────────────────────────────────────────────────
+if "%DO_FRONTEND%"=="true" (
+    if not exist "frontend" (
+        echo [WARN]  frontend\ directory not found — skipping frontend server.
+    ) else (
+        echo.
+        echo [INFO]  Starting frontend server on http://localhost:3000 ...
+        :: Kill existing instance if any
+        for /f "tokens=5" %%a in ('netstat -aon ^| find ":3000 " ^| find "LISTENING"') do (
+            taskkill /PID %%a /F >nul 2>&1
+        )
+        :: Open a new titled window running the server
+        start "Eurovision Frontend" /min cmd /c "cd frontend && %PYTHON% -m http.server 3000"
+        timeout /t 2 /nobreak >nul
+        echo [OK]    Frontend server started in background window
+    )
+)
+
 :: ── Done ─────────────────────────────────────────────────────────────────────
 echo.
 echo ╔══════════════════════════════════════════════════════╗
-echo ║  OK  Eurovision Backend is LIVE                      ║
+echo ║  OK  Eurovision 2025 is LIVE                         ║
 echo ╠══════════════════════════════════════════════════════╣
-echo ║  API Base    : http://localhost:8080/api             ║
-echo ║  Countries   : http://localhost:8080/api/countries   ║
-echo ║  Songs       : http://localhost:8080/api/songs       ║
-echo ║  Votes       : http://localhost:8080/api/votes       ║
-echo ║  Scores      : http://localhost:8080/api/scores      ║
+echo ║  Frontend  : http://localhost:3000                   ║
+echo ║  API Base  : http://localhost:8080/api               ║
 echo ╠══════════════════════════════════════════════════════╣
-echo ║  MySQL port  : localhost:3306                        ║
-echo ║  DB name     : eurovision_db                         ║
-echo ║  User/pass   : eurovision / eurovisionpass           ║
+echo ║  API endpoints:                                      ║
+echo ║    Countries : http://localhost:8080/api/countries   ║
+echo ║    Songs     : http://localhost:8080/api/songs       ║
+echo ║    Shows     : http://localhost:8080/api/shows       ║
+echo ║    Votes     : http://localhost:8080/api/votes       ║
+echo ║    Scores    : http://localhost:8080/api/scores      ║
 echo ╠══════════════════════════════════════════════════════╣
-echo ║  To stop     : start.bat --stop                      ║
-echo ║  To reset DB : start.bat --reset                     ║
-echo ║  To reseed   : python scripts/seed.py                ║
-echo ║  App logs    : docker compose logs -f app            ║
+echo ║  MySQL  : localhost:3306  db=eurovision_db           ║
+echo ║  User/pass : eurovision / eurovisionpass             ║
+echo ╠══════════════════════════════════════════════════════╣
+echo ║  To stop all   : start.bat --stop                    ║
+echo ║  To reset DB   : start.bat --reset                   ║
+echo ║  To reseed     : python scripts/seed.py              ║
+echo ║  App logs      : docker compose logs -f app          ║
 echo ╚══════════════════════════════════════════════════════╝
+
 
 :: ── --logs ───────────────────────────────────────────────────────────────────
 if "%DO_LOGS%"=="true" (

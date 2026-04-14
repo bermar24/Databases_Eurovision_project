@@ -29,7 +29,7 @@ public class VoteLogFactory {
                 voteLog.getVoteLogId(),
                 voteLog.getSong() != null ? voteLog.getSong().getSongId() : null,
                 voteLog.getJury() != null ? voteLog.getJury().getUserId() : null,
-                voteLog.getCitizen() != null ? voteLog.getCitizen().getUserId() : null
+                voteLog.getCitizen() != null ? voteLog.getCitizen().getUserId() : null,
                 voteLog.getPoints()
         );
     }

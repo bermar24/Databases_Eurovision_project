@@ -7,6 +7,7 @@
 #  --reset  : tear down containers + wipe DB volume before starting fresh
 #  --stop   : stop and remove all containers (keeps DB volume)
 #  --logs   : tail logs after startup instead of returning to shell
+#  --frontend : also start the frontend dev server on http://localhost:3000
 # =============================================================================
 
 set -euo pipefail
@@ -23,6 +24,7 @@ DO_SEED=false
 DO_RESET=false
 DO_STOP=false
 DO_LOGS=false
+DO_FRONTEND=false
 
 for arg in "$@"; do
   case $arg in
@@ -30,6 +32,7 @@ for arg in "$@"; do
     --reset) DO_RESET=true ;;
     --stop)  DO_STOP=true  ;;
     --logs)  DO_LOGS=true  ;;
+    --frontend) DO_FRONTEND=true ;;
     *) warn "Unknown argument: $arg" ;;
   esac
 done
@@ -41,10 +44,8 @@ fi
 
 # ── Check dependencies ───────────────────────────────────────────────────────
 info "Checking dependencies..."
-command -v docker        &>/dev/null || error "Docker not found. Install: https://docs.docker.com/get-docker/"
-command -v docker        &>/dev/null && docker compose version &>/dev/null || \
-  command -v docker-compose &>/dev/null || error "Docker Compose not found."
-command -v python3       &>/dev/null || error "python3 not found (needed for seed script)"
+command -v docker  &>/dev/null || error "Docker not found. Install: https://docs.docker.com/get-docker/"
+command -v python3 &>/dev/null || error "python3 not found (needed for seed script and frontend server)"
 success "All dependencies found"
 
 # Detect docker compose command (v2 plugin vs standalone)
@@ -58,7 +59,10 @@ fi
 if $DO_STOP; then
   info "Stopping containers..."
   $DC down
-  success "Containers stopped. DB volume preserved (use --reset to wipe it)."
+  # Also kill any running frontend server
+  pkill -f "python3 -m http.server 3000" 2>/dev/null && \
+    info "Frontend server stopped." || true
+  success "All services stopped. DB volume preserved (use --reset to wipe it)."
   exit 0
 fi
 
@@ -79,14 +83,11 @@ if [[ ! -f "mvnw" ]]; then
   echo "  Fix: download from https://start.spring.io, generate any project,"
   echo "  then copy mvnw, mvnw.cmd and .mvn/ into this directory."
   echo ""
-  echo "  OR run locally without Docker:"
-  echo "    mvn spring-boot:run"
-  echo ""
   read -rp "Continue anyway (Docker build will fail)? [y/N] " confirm
   [[ "$confirm" =~ ^[Yy]$ ]] || exit 1
 fi
 
-# ── Build & start ────────────────────────────────────────────────────────────
+# ── Build & start backend ────────────────────────────────────────────────────────────
 echo ""
 echo -e "${CYAN}╔══════════════════════════════════════════╗${NC}"
 echo -e "${CYAN}║   Eurovision 2025 — Starting up...       ║${NC}"
@@ -124,25 +125,54 @@ if $DO_SEED; then
   python3 scripts/seed.py --host http://localhost:8080 --retries 3
 fi
 
+# ── Frontend server ───────────────────────────────────────────────────────────
+FRONTEND_PID=""
+if $DO_FRONTEND; then
+  if [[ ! -d "frontend" ]]; then
+    warn "frontend/ directory not found — skipping frontend server."
+  else
+    echo ""
+    info "Starting frontend server on http://localhost:3000 ..."
+    # Kill any existing instance on port 3000
+    pkill -f "python3 -m http.server 3000" 2>/dev/null || true
+    sleep 1
+    # Start in background from the frontend directory
+    (cd frontend && python3 -m http.server 3000 &>/dev/null) &
+    FRONTEND_PID=$!
+    sleep 1
+    if kill -0 $FRONTEND_PID 2>/dev/null; then
+      success "Frontend server running (PID $FRONTEND_PID)"
+    else
+      warn "Frontend server may not have started. Run manually: cd frontend && python3 -m http.server 3000"
+    fi
+  fi
+fi
+
 # ── Done ─────────────────────────────────────────────────────────────────────
 echo ""
 echo -e "${GREEN}╔══════════════════════════════════════════════════════╗${NC}"
-echo -e "${GREEN}║  ✅  Eurovision Backend is LIVE                       ║${NC}"
+echo -e "${GREEN}║  ✅  Eurovision 2025 is LIVE                          ║${NC}"
 echo -e "${GREEN}╠══════════════════════════════════════════════════════╣${NC}"
-echo -e "${GREEN}║  API Base    : http://localhost:8080/api             ║${NC}"
-echo -e "${GREEN}║  Countries   : http://localhost:8080/api/countries   ║${NC}"
-echo -e "${GREEN}║  Songs       : http://localhost:8080/api/songs       ║${NC}"
-echo -e "${GREEN}║  Votes       : http://localhost:8080/api/votes       ║${NC}"
-echo -e "${GREEN}║  Scores      : http://localhost:8080/api/scores      ║${NC}"
+echo -e "${GREEN}║  🌐  Frontend  : http://localhost:3000               ║${NC}"
+echo -e "${GREEN}║  🔌  API Base  : http://localhost:8080/api           ║${NC}"
 echo -e "${GREEN}╠══════════════════════════════════════════════════════╣${NC}"
-echo -e "${GREEN}║  MySQL port  : localhost:3306                        ║${NC}"
-echo -e "${GREEN}║  DB name     : eurovision_db                         ║${NC}"
-echo -e "${GREEN}║  User/pass   : eurovision / eurovisionpass           ║${NC}"
+echo -e "${GREEN}║  API endpoints:                                      ║${NC}"
+echo -e "${GREEN}║    Countries : http://localhost:8080/api/countries   ║${NC}"
+echo -e "${GREEN}║    Songs     : http://localhost:8080/api/songs       ║${NC}"
+echo -e "${GREEN}║    Shows     : http://localhost:8080/api/shows       ║${NC}"
+echo -e "${GREEN}║    Votes     : http://localhost:8080/api/votes       ║${NC}"
+echo -e "${GREEN}║    Scores    : http://localhost:8080/api/scores      ║${NC}"
 echo -e "${GREEN}╠══════════════════════════════════════════════════════╣${NC}"
-echo -e "${GREEN}║  To stop     : ./start.sh --stop                     ║${NC}"
-echo -e "${GREEN}║  To reset DB : ./start.sh --reset                    ║${NC}"
-echo -e "${GREEN}║  To reseed   : python3 scripts/seed.py               ║${NC}"
-echo -e "${GREEN}║  App logs    : docker compose logs -f app            ║${NC}"
+echo -e "${GREEN}║  MySQL  : localhost:3306  db=eurovision_db           ║${NC}"
+echo -e "${GREEN}║  User/pass : eurovision / eurovisionpass             ║${NC}"
+echo -e "${GREEN}╠══════════════════════════════════════════════════════╣${NC}"
+echo -e "${GREEN}║  To stop all   : ./start.sh --stop                   ║${NC}"
+echo -e "${GREEN}║  To reset DB   : ./start.sh --reset                  ║${NC}"
+echo -e "${GREEN}║  To reseed     : python3 scripts/seed.py             ║${NC}"
+echo -e "${GREEN}║  App logs      : docker compose logs -f app          ║${NC}"
+if $DO_FRONTEND; then
+echo -e "${GREEN}║  Frontend logs : cd frontend && python3 -m http.server 3000 ║${NC}"
+fi
 echo -e "${GREEN}╚══════════════════════════════════════════════════════╝${NC}"
 
 if $DO_LOGS; then
