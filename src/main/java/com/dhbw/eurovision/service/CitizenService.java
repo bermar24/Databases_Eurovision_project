@@ -11,7 +11,6 @@ import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
-
 /** Service for Citizen — business logic layer. */
 @Service
 public class CitizenService {
@@ -29,25 +28,49 @@ public class CitizenService {
     }
 
     public List<CitizenResponseDTO> getAllCitizens() {
-        return citizenRepository.findAll()
-                .stream()
+        return citizenRepository.findAll().stream()
                 .map(citizenFactory::toResponseDTO)
                 .collect(Collectors.toList());
     }
 
     public CitizenResponseDTO getCitizenById(Long id) {
-        Citizen citizen = citizenRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Citizen not found: " + id));
-        return citizenFactory.toResponseDTO(citizen);
+        return citizenFactory.toResponseDTO(
+                citizenRepository.findById(id)
+                        .orElseThrow(() -> new RuntimeException("Citizen not found: " + id)));
+    }
+
+    /**
+     * Look up by phone number — return existing citizen or create a new one.
+     * This is the primary registration/login flow: same phone = same voter.
+     */
+    public CitizenResponseDTO findOrCreateByPhone(CitizenRequestDTO dto) {
+        if (dto.getPhoneNumber() == null || dto.getPhoneNumber().isBlank()) {
+            throw new IllegalArgumentException("Phone number is required.");
+        }
+        return citizenRepository.findByPhoneNumber(dto.getPhoneNumber())
+                .map(citizenFactory::toResponseDTO)
+                .orElseGet(() -> createCitizen(dto));
+    }
+
+    /** Look up an existing citizen by phone — 404 if not found */
+    public CitizenResponseDTO getByPhoneNumber(String phoneNumber) {
+        return citizenFactory.toResponseDTO(
+                citizenRepository.findByPhoneNumber(phoneNumber)
+                        .orElseThrow(() -> new RuntimeException(
+                                "No citizen found with phone: " + phoneNumber)));
     }
 
     public CitizenResponseDTO createCitizen(CitizenRequestDTO dto) {
+        if (citizenRepository.existsByPhoneNumber(dto.getPhoneNumber())) {
+            // Phone already registered — return existing instead of duplicating
+            return citizenFactory.toResponseDTO(
+                    citizenRepository.findByPhoneNumber(dto.getPhoneNumber()).get());
+        }
         Country country = countryRepository.findById(dto.getCountryCode())
                 .orElseThrow(() -> new RuntimeException("Country not found: " + dto.getCountryCode()));
-        Citizen citizen = citizenFactory.toEntity(dto, country);
-        return citizenFactory.toResponseDTO(citizenRepository.save(citizen));
+        return citizenFactory.toResponseDTO(
+                citizenRepository.save(citizenFactory.toEntity(dto, country)));
     }
-
     public void deleteCitizen(Long id) {
         citizenRepository.deleteById(id);
     }

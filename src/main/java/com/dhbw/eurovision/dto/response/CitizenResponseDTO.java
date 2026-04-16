@@ -10,5 +10,5 @@ import lombok.Setter;
 public class CitizenResponseDTO {
     private Long userId;
     private String countryCode;
-    // TODO: add username, email, phone when entity fields are added
+    private String phoneNumber;
 }

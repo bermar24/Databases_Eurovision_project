@@ -1,6 +1,7 @@
 package com.dhbw.eurovision.controller;
 
-import com.dhbw.eurovision.dto.request.VoteLogRequestDTO;
+import com.dhbw.eurovision.dto.request.BallotRequestDTO;
+import com.dhbw.eurovision.dto.response.BallotResponseDTO;
 import com.dhbw.eurovision.dto.response.VoteLogResponseDTO;
 import com.dhbw.eurovision.service.VoteLogService;
 import org.springframework.http.HttpStatus;
@@ -9,10 +10,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * REST Controller for VoteLog.
- * Base path: /api/votes
- */
 @RestController
 @RequestMapping("/api/votes")
 public class VoteLogController {
@@ -30,11 +27,13 @@ public class VoteLogController {
     }
 
     /**
-     * POST /api/votes — cast a vote.
-     * Body must contain songId and exactly one of juryId or citizenId.
+     * POST /api/votes/session — submit a complete ballot of 10 entries.
+     * This is the primary voting endpoint.
      */
     @PostMapping
-    public ResponseEntity<VoteLogResponseDTO> castVote(@RequestBody VoteLogRequestDTO dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(voteLogService.castVote(dto));
+    public ResponseEntity<BallotResponseDTO> submitBallot(
+            @RequestBody BallotRequestDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(voteLogService.submitBallot(dto));
     }
 }

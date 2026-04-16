@@ -18,16 +18,16 @@ erDiagram
     }
 
     JURY {
-        bigint user_id       PK_FK "FK/PK → user"
+        bigint user_id       PK, FK "FK/PK → user"
         string professional_bg     "e.g. Music Producer"
     }
 
     CITIZEN {
-        bigint user_id PK_FK "FK/PK → user"
+        bigint user_id PK, FK "FK/PK → user"
     }
 
     ADMIN {
-        bigint user_id    PK_FK "FK/PK → user"
+        bigint user_id    PK, FK "FK/PK → user"
         int    admin_level       "Permission tier: 1=super, 2=standard"
     }
 

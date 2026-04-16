@@ -38,7 +38,9 @@
     { "countryCode": "AM", "countryName": "Armenia" },
     { "countryCode": "GE", "countryName": "Georgia" },
     { "countryCode": "AZ", "countryName": "Azerbaijan" },
-    { "countryCode": "ME", "countryName": "Montenegro" }
+    { "countryCode": "ME", "countryName": "Montenegro" },
+    { "countryCode": "RW", "countryName": "Rest of the World" }
+
   ],
 
   "shows": [

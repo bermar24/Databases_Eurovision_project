@@ -7,10 +7,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * REST Controller for Score.
- * Base path: /api/scores
- */
 @RestController
 @RequestMapping("/api/scores")
 public class ScoreController {
@@ -29,16 +25,33 @@ public class ScoreController {
 
     /** GET /api/scores/song/{songId} — get the score for a specific song */
     @GetMapping("/song/{songId}")
-    public ResponseEntity<ScoreResponseDTO> getScoreForSong(@PathVariable Long songId) {
+    public ResponseEntity<ScoreResponseDTO> getScoreForSong(
+            @PathVariable Long songId) {
         return ResponseEntity.ok(scoreService.getScoreBySongId(songId));
     }
-
+    
     /**
-     * POST /api/scores/calculate/{songId} — trigger score calculation for a song.
-     * Aggregates all VoteLogs for the song into a final Score.
+     * POST /api/scores/calculate-show/{showId}
+     * Full score calculation for a show:
+     *   Grand Final  → jury (direct) + citizen (country aggregation)
+     *   Semi-Finals  → citizen (country aggregation) only
      */
+    @PostMapping("/calculate-show/{showId}")
+    public ResponseEntity<List<ScoreResponseDTO>> calculateShowScores(
+            @PathVariable Long showId) {
+        return ResponseEntity.ok(scoreService.calculateShowScores(showId));
+    }
+
+    /** POST /api/scores/calculate/{songId} — quick single-song recalculation */
     @PostMapping("/calculate/{songId}")
-    public ResponseEntity<ScoreResponseDTO> calculateScore(@PathVariable Long songId) {
+    public ResponseEntity<ScoreResponseDTO> calculateScore(
+            @PathVariable Long songId) {
         return ResponseEntity.ok(scoreService.calculateScoreForSong(songId));
+    }
+
+    /** POST /api/scores/calculate-all */
+    @PostMapping("/calculate-all")
+    public ResponseEntity<List<ScoreResponseDTO>> calculateAll() {
+        return ResponseEntity.ok(scoreService.calculateAllScores());
     }
 }

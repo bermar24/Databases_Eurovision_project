@@ -4,14 +4,13 @@ import com.dhbw.eurovision.entity.Song;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
+
 /**
  * Repository for Song.
- * Extend with custom query methods as needed.
- * Spring Data JPA auto-generates: findAll, findById, save, deleteById, etc.
  */
 @Repository
 public interface SongRepository extends JpaRepository<Song, Long> {
 
-    // TODO: add custom finders, e.g.:
-    // List<Song> findBy...(String param);
+    List<Song> findByCountry_CountryCode(String countryCode);
 }

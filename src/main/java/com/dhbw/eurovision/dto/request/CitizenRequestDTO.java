@@ -8,5 +8,5 @@ import lombok.Setter;
 @Getter @Setter @NoArgsConstructor
 public class CitizenRequestDTO {
     private String countryCode;
-    // TODO: add username, email, phone when entity fields are added
+    private String phoneNumber;
 }
