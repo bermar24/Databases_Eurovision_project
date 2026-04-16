@@ -6,9 +6,11 @@
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/entity/User.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/dto/request/ShowRequestDTO.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/service/VoteLogService.java
+/home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/dto/request/BallotEntryDTO.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/repository/JuryRepository.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/entity/Score.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/repository/ShowRepository.java
+/home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/dto/request/BallotRequestDTO.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/controller/ShowController.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/service/SongService.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/factory/VoteLogFactory.java
@@ -49,11 +51,13 @@
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/controller/JuryController.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/dto/response/JuryResponseDTO.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/repository/SongRepository.java
+/home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/config/WebConfig.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/entity/Country.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/dto/request/SongRequestDTO.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/repository/ScoreRepository.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/dto/request/JuryRequestDTO.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/repository/CitizenRepository.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/entity/VoteLog.java
+/home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/dto/response/BallotResponseDTO.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/controller/SongController.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/entity/Jury.java

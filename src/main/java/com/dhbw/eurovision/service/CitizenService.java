@@ -7,9 +7,12 @@ import com.dhbw.eurovision.entity.Country;
 import com.dhbw.eurovision.factory.CitizenFactory;
 import com.dhbw.eurovision.repository.CitizenRepository;
 import com.dhbw.eurovision.repository.CountryRepository;
+import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 /** Service for Citizen — business logic layer. */
 @Service
@@ -47,6 +50,18 @@ public class CitizenService {
         if (dto.getPhoneNumber() == null || dto.getPhoneNumber().isBlank()) {
             throw new IllegalArgumentException("Phone number is required.");
         }
+        Optional<Citizen> existingCitizen = findByPhoneNumberFlexible(dto.getPhoneNumber());
+        if (existingCitizen.isPresent()) {
+            return citizenFactory.toResponseDTO(existingCitizen.get());
+        }
+
+        if (dto.getCountryCode() == null || dto.getCountryCode().isBlank()) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Country code is required for new phone numbers.");
+        }
+
+        dto.setPhoneNumber(normalizePhoneNumber(dto.getPhoneNumber()));
         return citizenRepository.findByPhoneNumber(dto.getPhoneNumber())
                 .map(citizenFactory::toResponseDTO)
                 .orElseGet(() -> createCitizen(dto));
@@ -55,22 +70,50 @@ public class CitizenService {
     /** Look up an existing citizen by phone — 404 if not found */
     public CitizenResponseDTO getByPhoneNumber(String phoneNumber) {
         return citizenFactory.toResponseDTO(
-                citizenRepository.findByPhoneNumber(phoneNumber)
-                        .orElseThrow(() -> new RuntimeException(
+                findByPhoneNumberFlexible(phoneNumber)
+                        .orElseThrow(() -> new ResponseStatusException(
+                                HttpStatus.NOT_FOUND,
                                 "No citizen found with phone: " + phoneNumber)));
     }
 
     public CitizenResponseDTO createCitizen(CitizenRequestDTO dto) {
+        dto.setPhoneNumber(normalizePhoneNumber(dto.getPhoneNumber()));
         if (citizenRepository.existsByPhoneNumber(dto.getPhoneNumber())) {
             // Phone already registered — return existing instead of duplicating
             return citizenFactory.toResponseDTO(
-                    citizenRepository.findByPhoneNumber(dto.getPhoneNumber()).get());
+                    citizenRepository.findByPhoneNumber(dto.getPhoneNumber())
+                            .orElseThrow(() -> new IllegalStateException(
+                                    "Phone exists but citizen record could not be loaded.")));
         }
         Country country = countryRepository.findById(dto.getCountryCode())
                 .orElseThrow(() -> new RuntimeException("Country not found: " + dto.getCountryCode()));
         return citizenFactory.toResponseDTO(
                 citizenRepository.save(citizenFactory.toEntity(dto, country)));
     }
+
+    private Optional<Citizen> findByPhoneNumberFlexible(String phoneNumber) {
+        String trimmed = phoneNumber == null ? "" : phoneNumber.trim();
+        if (trimmed.isEmpty()) {
+            return Optional.empty();
+        }
+
+        String normalized = normalizePhoneNumber(trimmed);
+        Optional<Citizen> byNormalized = citizenRepository.findByPhoneNumber(normalized);
+        if (byNormalized.isPresent()) {
+            return byNormalized;
+        }
+
+        if (!normalized.equals(trimmed)) {
+            return citizenRepository.findByPhoneNumber(trimmed);
+        }
+
+        return Optional.empty();
+    }
+
+    private String normalizePhoneNumber(String phoneNumber) {
+        return phoneNumber == null ? null : phoneNumber.trim().replaceAll("\\s+", "");
+    }
+
     public void deleteCitizen(Long id) {
         citizenRepository.deleteById(id);
     }

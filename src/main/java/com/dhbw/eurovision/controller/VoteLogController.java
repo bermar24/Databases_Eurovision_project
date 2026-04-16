@@ -30,7 +30,7 @@ public class VoteLogController {
      * POST /api/votes/session — submit a complete ballot of 10 entries.
      * This is the primary voting endpoint.
      */
-    @PostMapping
+    @PostMapping("/session")
     public ResponseEntity<BallotResponseDTO> submitBallot(
             @RequestBody BallotRequestDTO dto) {
         return ResponseEntity.status(HttpStatus.CREATED)

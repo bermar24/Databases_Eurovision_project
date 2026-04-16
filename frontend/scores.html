@@ -63,7 +63,7 @@
   <div class="recalc-bar">
     <span>Scores are calculated from the vote_log table in real time.</span>
     <button class="btn btn-secondary" id="btnRecalcAll" style="padding:8px 18px;font-size:0.85rem;">
-      ↻ Recalculate All
+      ↻ Recalculate Scores
     </button>
   </div>
 
@@ -198,7 +198,7 @@
       if (unscored.length > 0) {
         box.style.display = 'block';
         document.getElementById('unscoredList').innerHTML =
-          unscored.map(s => `<div style="padding:6px 0;border-bottom:1px solid #1a1a4e;color:#aaa;">${s.singerName} <span style="color:#666">(${s.countryCode})</span></div>`).join('');
+                unscored.map(s => `<div style="padding:6px 0;border-bottom:1px solid #1a1a4e;color:#aaa;">${s.singerName} <span style="color:#666">(${s.countryCode})</span></div>`).join('');
       } else {
         box.style.display = 'none';
       }
@@ -210,18 +210,24 @@
 
   // ── Recalculate all scores ────────────────────────────────────────────
   document.getElementById('btnRecalcAll').addEventListener('click', async () => {
-    const btn = document.getElementById('btnRecalcAll');
-    btn.disabled = true;
+    const btn     = document.getElementById('btnRecalcAll');
+    const showId  = document.getElementById('showFilter').value;
+    btn.disabled  = true;
     btn.textContent = 'Recalculating...';
     try {
-      await apiPost('/scores/calculate-all');
-      showMsg('success', '✓ All scores recalculated from vote_log table.');
+      if (showId) {
+        await apiPost(`/scores/calculate-show/${showId}`);
+        showMsg('success', '✓ Show scores recalculated.');
+      } else {
+        await apiPost('/scores/calculate-all');
+        showMsg('success', '✓ All scores recalculated.');
+      }
       await loadScores();
     } catch(e) {
       showMsg('error', 'Recalculation failed: ' + e.message);
     } finally {
       btn.disabled = false;
-      btn.textContent = '↻ Recalculate All';
+      btn.textContent = '↻ Recalculate Scores';
     }
   });
 
