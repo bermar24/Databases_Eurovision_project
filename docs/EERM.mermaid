@@ -24,6 +24,7 @@ erDiagram
 
     CITIZEN {
         bigint user_id PK, FK "FK/PK → user"
+        string phone_number       "UNIQUE NOT NULL — voter identity"
     }
 
     ADMIN {
@@ -40,7 +41,9 @@ erDiagram
     VOTE_LOG {
         bigint vote_log_id  PK  "AUTO_INCREMENT"
         int    points           "Eurovision scale: 12,10,8,7,6,5,4,3,2,1 — NOT NULL"
+        string vote_session_id    "UUID grouping 10 rows per ballot — NOT NULL"
         bigint song_id       FK "FK → song — NOT NULL"
+        bigint show_id         FK "FK → show — NOT NULL"
         bigint jury_id       FK "FK → jury — nullable (jury vote)"
         bigint citizen_id    FK "FK → citizen — nullable (public vote)"
     }
@@ -99,6 +102,10 @@ erDiagram
     %% ── VoteLog → Song (M:1) ─────────────────────
     %% "Many votes target one song"
     VOTE_LOG }o--|| SONG : "votes for"
+
+    %% ── VoteLog → Show (M:1) ─────────────────────
+    %% "Many votes belong to one show"
+    VOTE_LOG }o--|| SHOW : "cast in"
 
     %% ── Calculate: Song → Score (1:1) ────────────
     %% "One song has one calculated score"

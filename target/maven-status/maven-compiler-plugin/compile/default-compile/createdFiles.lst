@@ -59,5 +59,6 @@ com/dhbw/eurovision/entity/Show.class
 com/dhbw/eurovision/controller/CountryController.class
 com/dhbw/eurovision/entity/Admin.class
 com/dhbw/eurovision/dto/response/AdminResponseDTO.class
+com/dhbw/eurovision/controller/ApiExceptionHandler.class
 com/dhbw/eurovision/factory/SongFactory.class
 com/dhbw/eurovision/service/SongService.class

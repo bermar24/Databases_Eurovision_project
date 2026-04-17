@@ -107,6 +107,9 @@ A professional music expert who casts weighted jury votes. Each country's jury v
 | `userId` (inherited) | `user_id` | `BIGINT` | **PK/FK** → `user.user_id` | Joined table — same ID as User |
 | `professionalBg` | `professional_bg` | `VARCHAR(255)` | nullable | e.g. `"Music Producer"`, `"Composer"` |
 
+**Jury aggregation rule:**
+Each country has 1–5 Jury members in the database. When scores are calculated, all jury ballots from the same country are pooled — their raw points per song are summed to produce a national ranking, and then the scale 12,10,8,7,6,5,4,3,2,1 is awarded once per country to the top 10 songs. This mirrors the real Eurovision national jury model: regardless of how many jurors a country has, each country contributes exactly one set of points.
+
 **Relationships:**
 
 | Relationship | Type | Target | Notes |
@@ -126,8 +129,9 @@ A member of the public who casts a televote. Citizens vote from their home count
 | Attribute | Column | Type | Constraints | Notes |
 |---|---|---|---|---|
 | `userId` (inherited) | `user_id` | `BIGINT` | **PK/FK** → `user.user_id` | Joined table |
+| `phoneNumber` | `phone_number` | `VARCHAR(20)` | NOT NULL, UNIQUE | Voter identity — same phone = same citizen |
 
-> **TODO:** Add phone/SMS verification field when implementing public voting rules.
+> Registering with a phone number that already exists returns the existing citizen record (idempotent).
 
 **Relationships:**
 
@@ -196,12 +200,12 @@ Records a single vote cast event. Acts as the resolved M:N between (Jury or Citi
 | Attribute | Column | Type | Constraints | Notes |
 |---|---|---|---|---|
 | `voteLogId` | `vote_log_id` | `BIGINT` | **PK**, AUTO_INCREMENT | |
+| `points` | `points` | `INT` | NOT NULL | Eurovision scale: 12, 10, 8, 7, 6, 5, 4, 3, 2, 1 |
 | `song` (FK) | `song_id` | `BIGINT` | NOT NULL, FK → `song` | Song being voted for |
 | `jury` (FK) | `jury_id` | `BIGINT` | nullable, FK → `jury` | Set when jury vote |
 | `citizen` (FK) | `citizen_id` | `BIGINT` | nullable, FK → `citizen` | Set when public vote |
 
-> **Business rule:** Exactly one of `jury_id` / `citizen_id` must be set. Enforced in `VoteLogService.castVote()`.  
-> **TODO:** Add `points INT NOT NULL` once the scoring scale is defined.
+> **Business rules:** (1) Exactly one of `jury_id` / `citizen_id` must be set. (2) `points` must be one of `{12, 10, 8, 7, 6, 5, 4, 3, 2, 1}`. (3) Voter's country must differ from the song's country — enforced in `VoteLogService`.
 
 ---
 
@@ -233,8 +237,6 @@ An Eurovision broadcast event. The contest has three shows: Semi-Final 1, Semi-F
 |---|---|---|---|---|
 | `showId` | `show_id` | `BIGINT` | **PK**, AUTO_INCREMENT | |
 | `showName` | `show_name` | `VARCHAR(255)` | NOT NULL | e.g. `"Semi-Final 1"`, `"Grand Final"` |
-
-> **TODO:** Add `showDate DATE` and `showType ENUM('SEMI_FINAL_1','SEMI_FINAL_2','GRAND_FINAL')` once agreed.
 
 **Relationships:**
 

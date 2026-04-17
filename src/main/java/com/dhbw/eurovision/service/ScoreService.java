@@ -16,26 +16,39 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * Service for Score — implements the EERM "Calculate" relationship.
+ * Score calculation — implements the EERM "Calculate" relationship.
  *
- * JURY scoring (Grand Final):
- *  *   Each jury submits a full ballot. Points are added directly as awarded.
- *  *   Total jury score for a song = sum of all jury VoteLog.points for that song.
- *  *
- *  * CITIZEN/TELEVOTE scoring:
- *  *   All citizens from the same country are pooled.
- *  *   Their raw votes for each song are summed per country.
- *  *   Each country's top 10 songs receive 12,10,8,7,6,5,4,3,2,1.
- *  *   Final citizen score for a song = sum of points received from all countries.
- *  *
- *  * SEMI-FINALS: 100% televote (citizen votes only, same aggregation).
- *  *
- *  * calculateShowScores(showId) runs both and stores the combined total per song.
- *  */
+ * ── JURY scoring (Grand Final only) ─────────────────────────────────────────
+ *   Mirrors the real Eurovision national jury aggregation:
+ *   1. Collect all jury VoteLogs for the show.
+ *   2. Group by voter's country (each country has 1–5 jurors).
+ *   3. For each country: sum each juror's raw points per song
+ *      → this produces a national ranking (higher total = higher rank).
+ *   4. Each country's top 10 songs receive the scale: 12,10,8,7,6,5,4,3,2,1.
+ *   5. Jury score per song = sum of scale-points awarded across all countries.
+ *
+ *   Result: regardless of how many jurors a country has, each country
+ *   contributes exactly one set of 12,10,8,...,1 to the final scores —
+ *   faithful to the real Eurovision jury aggregation model.
+ *
+ * ── CITIZEN / TELEVOTE scoring (all shows) ──────────────────────────────────
+ *   Same aggregation as jury but uses citizen voter's country:
+ *   1. Group citizen VoteLogs by voter's country.
+ *   2. Sum raw points per song per country → national ranking.
+ *   3. Each country awards 12,10,8,7,6,5,4,3,2,1 to its top 10.
+ *   4. Citizen score = sum across all countries.
+ *
+ * ── Semi-Finals ──────────────────────────────────────────────────────────────
+ *   100% televote — jury scoring block is skipped entirely.
+ *
+ * ── Grand Final ──────────────────────────────────────────────────────────────
+ *   50% jury + 50% televote — both blocks run, results are summed.
+ */
 @Service
 public class ScoreService {
 
     private static final int[] POINTS_SCALE = {12, 10, 8, 7, 6, 5, 4, 3, 2, 1};
+    private static final String GRAND_FINAL   = "grand final";
 
     private final ScoreRepository scoreRepository;
     private final SongRepository songRepository;
@@ -71,78 +84,50 @@ public class ScoreService {
     }
 
     /**
-     * Calculate and persist scores for ALL songs in a show.
+     * Full score calculation for all songs in a show.
      *
-     * Grand Final  → jury points (direct sum) + citizen points (country aggregation)
-     * Semi-Finals  → citizen points only (country aggregation)
+     * Grand Final : jury aggregation + citizen aggregation
+     * Semi-Finals : citizen aggregation only
      */
     public List<ScoreResponseDTO> calculateShowScores(Long showId) {
         Show show = showRepository.findById(showId)
                 .orElseThrow(() -> new RuntimeException("Show not found: " + showId));
 
         List<Song> songs = show.getSongs();
-        if (songs.isEmpty()) {
-            return Collections.emptyList();
-        }
+        if (songs.isEmpty()) return Collections.emptyList();
 
-        boolean isGrandFinal = "Grand Final".equalsIgnoreCase(show.getShowName());
+        boolean isGrandFinal = show.getShowName() != null &&
+                show.getShowName().trim().equalsIgnoreCase(GRAND_FINAL);
 
-        // ── Jury score: direct sum of points per song ────────────────────
+        // ── Jury score: national aggregation (Grand Final only) ───────────
         Map<Long, Integer> juryScoreMap = new HashMap<>();
         if (isGrandFinal) {
             List<VoteLog> juryVotes = voteLogRepository
                     .findByShow_ShowIdAndJuryIsNotNull(showId);
-            for (VoteLog vl : juryVotes) {
-                juryScoreMap.merge(vl.getSong().getSongId(),
-                        vl.getPoints() != null ? vl.getPoints() : 0, Integer::sum);
-            }
+            juryScoreMap = aggregateByCountry(juryVotes, true);
         }
 
-        // ── Citizen score: aggregate by country then award scale ─────────
-        Map<Long, Integer> citizenScoreMap = new HashMap<>();
+        // ── Citizen score: national aggregation (all shows) ───────────────
         List<VoteLog> citizenVotes = voteLogRepository
                 .findByShow_ShowIdAndCitizenIsNotNull(showId);
+        Map<Long, Integer> citizenScoreMap = aggregateByCountry(citizenVotes, false);
 
-        if (!citizenVotes.isEmpty()) {
-            // Group raw votes: country → songId → total raw votes
-            Map<String, Map<Long, Integer>> rawByCountry = new HashMap<>();
-            for (VoteLog vl : citizenVotes) {
-                String country = vl.getCitizen().getCountry().getCountryCode();
-                Long   songId  = vl.getSong().getSongId();
-                rawByCountry
-                        .computeIfAbsent(country, k -> new HashMap<>())
-                        .merge(songId, vl.getPoints() != null ? vl.getPoints() : 1, Integer::sum);
-            }
-
-            // For each country: rank songs → award 12,10,8,7,6,5,4,3,2,1 to top 10
-            for (Map<Long, Integer> songRaw : rawByCountry.values()) {
-                List<Map.Entry<Long, Integer>> ranked = new ArrayList<>(songRaw.entrySet());
-                ranked.sort((a, b) -> b.getValue() - a.getValue()); // descending
-
-                for (int i = 0; i < Math.min(10, ranked.size()); i++) {
-                    Long songId = ranked.get(i).getKey();
-                    citizenScoreMap.merge(songId, POINTS_SCALE[i], Integer::sum);
-                }
-            }
-        }
-
-        // ── Persist combined score per song ──────────────────────────────
+        // ── Persist combined score per song ───────────────────────────────
         List<ScoreResponseDTO> results = new ArrayList<>();
         for (Song song : songs) {
             int jury    = juryScoreMap.getOrDefault(song.getSongId(), 0);
             int citizen = citizenScoreMap.getOrDefault(song.getSongId(), 0);
-            int total   = jury + citizen;
 
             Score score = scoreRepository.findBySong(song).orElse(new Score());
             score.setSong(song);
-            score.setSongScore(total);
+            score.setSongScore(jury + citizen);
             results.add(scoreFactory.toResponseDTO(scoreRepository.save(score)));
         }
 
         return results;
     }
 
-    /** Recalculate one specific song (simple direct sum — for quick updates after a vote) */
+    /** Quick single-song recalculation — simple direct point sum. */
     public ScoreResponseDTO calculateScoreForSong(Long songId) {
         Song song = songRepository.findById(songId)
                 .orElseThrow(() -> new RuntimeException("Song not found: " + songId));
@@ -155,10 +140,81 @@ public class ScoreService {
         return scoreFactory.toResponseDTO(scoreRepository.save(score));
     }
 
-    /** Recalculate every song across all shows */
+    /** Recalculate every song across all shows. */
     public List<ScoreResponseDTO> calculateAllScores() {
         return showRepository.findAll().stream()
                 .flatMap(show -> calculateShowScores(show.getShowId()).stream())
                 .collect(Collectors.toList());
+    }
+
+    // ── Private helpers ───────────────────────────────────────────────────────
+
+    /**
+
+     * Algorithm:
+     *   1. Group VoteLogs by voter's country code.
+     *   2. For each country: sum raw points per song across all voters
+     *      from that country → produces a national ranking.
+     *   3. Sort songs by national total descending.
+     *   4. Top 10 songs receive 12,10,8,7,6,5,4,3,2,1 from that country.
+     *   5. Accumulate those scale-points per song across all countries.
+     *
+     * For jury:   one country's 5 jurors each submit a ballot (10 rows).
+     *             Their raw points per song are summed → national ranking.
+     *             Result: each country contributes one set of 12,10,8,...,1
+     *             regardless of how many jurors voted.
+     *
+     * For citizen: same logic — each country's citizens pool their votes
+     *             into one national ranking.
+     *
+     * @param votes    list of VoteLog rows (all for the same show)
+     * @param isJury   true = read voter country from jury FK,
+     *                 false = read from citizen FK
+     * @return map of songId → awarded scale-points total
+     */
+    private Map<Long, Integer> aggregateByCountry(
+            List<VoteLog> votes, boolean isJury) {
+
+        if (votes.isEmpty()) return Collections.emptyMap();
+
+        // Step 1 — group raw points: country → songId → sum of raw points
+        Map<String, Map<Long, Integer>> rawByCountry = new HashMap<>();
+
+        for (VoteLog vl : votes) {
+            // Resolve voter's country
+            String country;
+            if (isJury) {
+                if (vl.getJury() == null || vl.getJury().getCountry() == null) continue;
+                country = vl.getJury().getCountry().getCountryCode();
+            } else {
+                if (vl.getCitizen() == null || vl.getCitizen().getCountry() == null) continue;
+                country = vl.getCitizen().getCountry().getCountryCode();
+            }
+
+            Long songId = vl.getSong().getSongId();
+            int  pts    = vl.getPoints() != null ? vl.getPoints() : 0;
+
+            rawByCountry
+                    .computeIfAbsent(country, k -> new HashMap<>())
+                    .merge(songId, pts, Integer::sum);
+        }
+
+        // Step 2 — for each country: rank songs → award scale points
+        Map<Long, Integer> scoreMap = new HashMap<>();
+
+        for (Map.Entry<String, Map<Long, Integer>> entry : rawByCountry.entrySet()) {
+            // Sort songs by their raw national total, descending
+            List<Map.Entry<Long, Integer>> ranked =
+                    new ArrayList<>(entry.getValue().entrySet());
+            ranked.sort((a, b) -> b.getValue() - a.getValue());
+
+            // Award 12,10,8,7,6,5,4,3,2,1 to top 10
+            for (int i = 0; i < Math.min(10, ranked.size()); i++) {
+                Long songId = ranked.get(i).getKey();
+                scoreMap.merge(songId, POINTS_SCALE[i], Integer::sum);
+            }
+        }
+
+        return scoreMap;
     }
 }
