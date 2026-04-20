@@ -17,7 +17,6 @@
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/controller/AdminController.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/dto/response/VoteLogResponseDTO.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/factory/CitizenFactory.java
-/home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/controller/ApiExceptionHandler.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/dto/response/CitizenResponseDTO.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/factory/ShowFactory.java
 /home/bermar/GITJBM/Databases_Eurovision_project/src/main/java/com/dhbw/eurovision/service/CitizenService.java

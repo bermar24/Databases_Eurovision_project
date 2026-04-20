@@ -1,5 +1,5 @@
 ---
-title: Eurovision 2025 — Enhanced Entity Relationship Model (EERM)
+title: Eurovision 2025 Project - Enhanced Entity Relationship Model (EERM)
 ---
 erDiagram
 
@@ -43,7 +43,7 @@ erDiagram
         int    points             "Eurovision scale: 12,10,8,7,6,5,4,3,2,1 — NOT NULL"
         string vote_session_id    "UUID grouping 10 rows per ballot — NOT NULL"
         bigint song_id         FK "FK → song — NOT NULL"
-        bigint show_id         FK "FK → show — NOT NULL"
+        bigint show_id         FK "FK → shows — NOT NULL"
         bigint jury_id         FK "FK → jury — nullable (jury vote)"
         bigint citizen_id      FK "FK → citizen — nullable (televote)"
     }
@@ -52,10 +52,10 @@ erDiagram
         bigint score_id   PK  "AUTO_INCREMENT"
         int    song_score      "Aggregated total points — default 0"
         bigint song_id     FK "FK → song — NOT NULL"
-        bigint show_id     FK "FK → show — NOT NULL"
+        bigint show_id     FK "FK → shows — NOT NULL"
     }
 
-    SHOW {
+    SHOWS {
         bigint show_id   PK "AUTO_INCREMENT"
         string show_name    "e.g. Semi-Final 1, Grand Final — NOT NULL"
     }
@@ -65,13 +65,13 @@ erDiagram
 %% ─────────────────────────────────────────────
 
     SHOW_SONG {
-        bigint show_id  FK "FK → show"
+        bigint show_id  FK "FK → shows"
         bigint song_id  FK "FK → song"
     }
 
     ADMIN_SHOW {
         bigint admin_user_id FK "FK → admin"
-        bigint show_id       FK "FK → show"
+        bigint show_id       FK "FK → shows"
     }
 
 %% ─────────────────────────────────────────────
@@ -106,19 +106,19 @@ erDiagram
 
 %% ── VoteLog → Show (M:1) ─────────────────────
 %% "Many votes belong to one show"
-    VOTE_LOG }o--|| SHOW : "cast in"
+    VOTE_LOG }o--|| SHOWS : "cast in"
 
 %% ── Calculate: Song/Show → Score (M:1 each, UNIQUE together) ─
 %% "One score per song per show — independent per show"
     SONG    ||--o{ SCORE : "Calculate"
-    SHOW    ||--o{ SCORE : "Calculate"
+    SHOWS   ||--o{ SCORE : "Calculate"
 
 %% ── Song ↔ Show (M:N via SHOW_SONG) ──────────
 %% "Songs appear in shows"
-    SHOW     ||--o{ SHOW_SONG  : "contains"
+    SHOWS    ||--o{ SHOW_SONG  : "contains"
     SONG     ||--o{ SHOW_SONG  : "appears in"
 
 %% ── Manage: Admin ↔ Show (M:N via ADMIN_SHOW)
 %% "Admins manage shows"
     ADMIN    ||--o{ ADMIN_SHOW : "Manage"
-    SHOW     ||--o{ ADMIN_SHOW : "managed by"
+    SHOWS    ||--o{ ADMIN_SHOW : "managed by"
