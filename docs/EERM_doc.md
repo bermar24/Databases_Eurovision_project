@@ -1,414 +1,253 @@
-# Eurovision 2025 — EERM Documentation
+# Eurovision Project - EERM Documentation (Current Implementation)
 
-> **Project:** Databases_Eurovision_project  
-> **Backend:** Java 17 · Spring Boot 3.2 · Hibernate/JPA · MySQL 8  
+> **Project:** `Databases_Eurovision_project`  
+> **Backend:** Java 17+, Spring Boot 3.2, Hibernate/JPA, MySQL/H2  
 > **Package:** `com.dhbw.eurovision`  
-> **Inheritance strategy:** Joined Table Inheritance (JTI)
-
----
-
-## Table of Contents
-
-1. [Overview](#1-overview)
-2. [Entity Catalogue](#2-entity-catalogue)
-   - 2.1 [Country](#21-country)
-   - 2.2 [User](#22-user-abstract-base)
-   - 2.3 [Jury](#23-jury)
-   - 2.4 [Citizen](#24-citizen)
-   - 2.5 [Admin](#25-admin)
-   - 2.6 [Song](#26-song)
-   - 2.7 [VoteLog](#27-votelog)
-   - 2.8 [Score](#28-score)
-   - 2.9 [Show](#29-show)
-3. [Relationship Catalogue](#3-relationship-catalogue)
-   - 3.1 [Has — Country → User (1:M)](#31-has--country--user-1m)
-   - 3.2 [Is a — User → Jury | Citizen | Admin](#32-is-a--user--jury--citizen--admin)
-   - 3.3 [Country → Song (1:M)](#33-country--song-1m)
-   - 3.4 [Votes — Jury/Citizen → VoteLog → Song (M:N)](#34-votes--jurycitizen--votelog--song-mn)
-   - 3.5 [Calculate — VoteLog → Score](#35-calculate--votelog--score)
-   - 3.6 [Song ↔ Show (M:N)](#36-song--show-mn)
-   - 3.7 [Manage — Admin ↔ Show (M:N)](#37-manage--admin--show-mn)
-4. [Database Tables](#4-database-tables)
-5. [Join Tables](#5-join-tables)
-6. [Inheritance Tables (JTI)](#6-inheritance-tables-jti)
-7. [Design Decisions & TODOs](#7-design-decisions--todos)
+> **Inheritance strategy:** Joined Table Inheritance (`InheritanceType.JOINED`)
 
 ---
 
 ## 1. Overview
 
-The Eurovision 2025 data model captures the full lifecycle of the contest:
-participating **Countries** submit **Songs**, three **Shows** are held (Semi-Final 1, Semi-Final 2, Grand Final), registered **Users** (split into **Jury**, **Citizen**, and **Admin** subtypes) interact with the system, **VoteLogs** record every individual vote cast, and a **Score** aggregates those votes per song.
+The current implemented model has these core concepts:
+
+- `Country` owns many `User` and many `Song`
+- `User` is abstract, specialized into `Jury`, `Citizen`, and `Admin`
+- `Show` (table name `shows`) contains many songs and can be managed by many admins
+- `VoteLog` stores one awarded point entry and is grouped into a ballot with `vote_session_id`
+- `Score` stores aggregated results per `(song, show)` pair
 
 ```
-Country ──has──► User (abstract)
-                   ├── Jury      ──votes──► VoteLog ──► Song ──calculate──► Score
-                   ├── Citizen   ──votes──► VoteLog
-                   └── Admin     ──manages──► Show ◄──contains──► Song
-Country ──────────────────────────────────────────────► Song
+Country --has--> User (abstract)
+                  |-- Jury --votes--> VoteLog --for--> Song
+                  |-- Citizen --votes-> VoteLog
+                  |-- Admin --manage--> Show
+
+Country --submits--> Song --appears in--> Show
+VoteLog --calculate--> Score (per song per show)
 ```
 
 ---
 
 ## 2. Entity Catalogue
 
----
+### 2.1 `Country`
 
-### 2.1 Country
+- **Table:** `country`
+- **Class:** `com.dhbw.eurovision.entity.Country`
 
-**EERM notation:** Rectangle  
-**DB table:** `country`  
-**Java class:** `com.dhbw.eurovision.entity.Country`
+| Attribute | Column | Constraints |
+|---|---|---|
+| `countryCode` | `country_code` | PK, NOT NULL, length 3 |
+| `countryName` | `country_name` | NOT NULL, UNIQUE |
 
-Represents a nation participating in Eurovision. Used as the root anchor — every Song and every User belongs to a Country.
+Relationships:
+- 1:M to `User` (`Country.users`)
+- 1:M to `Song` (`Country.songs`)
 
-| Attribute | Column | Type | Constraints | Notes |
-|---|---|---|---|---|
-| `countryCode` | `country_code` | `VARCHAR(3)` | **PK**, NOT NULL | ISO 3166-1 alpha-2, e.g. `"DE"`, `"SE"` |
-| `countryName` | `country_name` | `VARCHAR(255)` | NOT NULL, UNIQUE | Full English name |
+### 2.2 `User` (abstract)
 
-**Relationships owned by Country:**
+- **Table:** `user`
+- **Class:** `com.dhbw.eurovision.entity.User`
+- **Inheritance:** `@Inheritance(strategy = JOINED)`
 
-| Relationship | Type | Target | Mapped by |
-|---|---|---|---|
-| Has Users | 1:M | `User` | `user.country_code` FK |
-| Has Songs | 1:M | `Song` | `song.country_code` FK |
+| Attribute | Column | Constraints |
+|---|---|---|
+| `userId` | `user_id` | PK, AUTO_INCREMENT |
+| `country` | `country_code` | FK -> `country.country_code`, NOT NULL |
 
----
+Current TODO in code:
+- optional future shared fields: `username`, `email`
 
-### 2.2 User *(abstract base)*
+### 2.3 `Jury`
 
-**EERM notation:** Rectangle + "Is a" triangle  
-**DB table:** `user`  
-**Java class:** `com.dhbw.eurovision.entity.User`  
-**JPA Inheritance:** `InheritanceType.JOINED`
+- **Table:** `jury`
+- **Class:** `com.dhbw.eurovision.entity.Jury`
 
-Base class for all user types. Never instantiated directly — always a Jury, Citizen, or Admin. The `user` table holds all shared columns; subtype tables join back via `user_id`.
+| Attribute | Column | Constraints |
+|---|---|---|
+| inherited `userId` | `user_id` | PK/FK -> `user.user_id` |
+| `professionalBg` | `professional_bg` | nullable |
 
-| Attribute | Column | Type | Constraints | Notes |
-|---|---|---|---|---|
-| `userId` | `user_id` | `BIGINT` | **PK**, AUTO_INCREMENT | Shared across all subtypes |
-| `country` (FK) | `country_code` | `VARCHAR(3)` | NOT NULL, FK → `country` | The "Has" relationship |
+Relationships:
+- 1:M to `VoteLog` (`vote_log.jury_id`)
 
-> **TODO:** Add `username VARCHAR(255) UNIQUE NOT NULL` and `email VARCHAR(255) UNIQUE NOT NULL` once agreed with your team.
+### 2.4 `Citizen`
 
----
+- **Table:** `citizen`
+- **Class:** `com.dhbw.eurovision.entity.Citizen`
 
-### 2.3 Jury
+| Attribute | Column | Constraints |
+|---|---|---|
+| inherited `userId` | `user_id` | PK/FK -> `user.user_id` |
+| `phoneNumber` | `phone_number` | NOT NULL, UNIQUE, length 20 |
 
-**EERM notation:** Rectangle (subtype of User)  
-**DB table:** `jury`  
-**Java class:** `com.dhbw.eurovision.entity.Jury`
+Behavior in service layer:
+- phone is treated as a business key
+- registration is idempotent (`findOrCreateByPhone` returns existing citizen for existing phone)
 
-A professional music expert who casts weighted jury votes. Each country's jury votes for songs from *other* countries.
+### 2.5 `Admin`
 
-| Attribute | Column | Type | Constraints | Notes |
-|---|---|---|---|---|
-| `userId` (inherited) | `user_id` | `BIGINT` | **PK/FK** → `user.user_id` | Joined table — same ID as User |
-| `professionalBg` | `professional_bg` | `VARCHAR(255)` | nullable | e.g. `"Music Producer"`, `"Composer"` |
+- **Table:** `admin`
+- **Class:** `com.dhbw.eurovision.entity.Admin`
 
-**Jury aggregation rule:**
-Each country has 1–5 Jury members in the database. When scores are calculated, all jury ballots from the same country are pooled — their raw points per song are summed to produce a national ranking, and then the scale 12,10,8,7,6,5,4,3,2,1 is awarded once per country to the top 10 songs. This mirrors the real Eurovision national jury model: regardless of how many jurors a country has, each country contributes exactly one set of points.
+| Attribute | Column | Constraints |
+|---|---|---|
+| inherited `userId` | `user_id` | PK/FK -> `user.user_id` |
+| `adminLevel` | `admin_level` | nullable |
 
-**Relationships:**
+Relationships:
+- M:N with `Show` via join table `admin_show` (`admin_user_id`, `show_id`)
 
-| Relationship | Type | Target | Notes |
-|---|---|---|---|
-| Votes | 1:M | `VoteLog` | `vote_log.jury_id` FK |
+### 2.6 `Song`
 
----
+- **Table:** `song`
+- **Class:** `com.dhbw.eurovision.entity.Song`
 
-### 2.4 Citizen
+| Attribute | Column | Constraints |
+|---|---|---|
+| `songId` | `song_id` | PK, AUTO_INCREMENT |
+| `singerName` | `singer_name` | NOT NULL |
+| `country` | `country_code` | FK -> `country.country_code`, NOT NULL |
 
-**EERM notation:** Rectangle (subtype of User)  
-**DB table:** `citizen`  
-**Java class:** `com.dhbw.eurovision.entity.Citizen`
+Relationships:
+- M:1 to `Country`
+- 1:M to `VoteLog`
+- 1:M to `Score` (because score is per show)
+- M:N with `Show` via `show_song` (inverse side on `Song`)
 
-A member of the public who casts a televote. Citizens vote from their home country.
+### 2.7 `Show`
 
-| Attribute | Column | Type | Constraints | Notes |
-|---|---|---|---|---|
-| `userId` (inherited) | `user_id` | `BIGINT` | **PK/FK** → `user.user_id` | Joined table |
-| `phoneNumber` | `phone_number` | `VARCHAR(20)` | NOT NULL, UNIQUE | Voter identity — same phone = same citizen |
+- **Table:** `shows`
+- **Class:** `com.dhbw.eurovision.entity.Show`
 
-> Registering with a phone number that already exists returns the existing citizen record (idempotent).
+| Attribute | Column | Constraints |
+|---|---|---|
+| `showId` | `show_id` | PK, AUTO_INCREMENT |
+| `showName` | `show_name` | NOT NULL |
 
-**Relationships:**
+Relationships:
+- M:N with `Song` via `show_song`
+- M:N with `Admin` via `admin_show` (inverse side on `Show`)
 
-| Relationship | Type | Target | Notes |
-|---|---|---|---|
-| Votes | 1:M | `VoteLog` | `vote_log.citizen_id` FK |
-
----
-
-### 2.5 Admin
-
-**EERM notation:** Rectangle (subtype of User)  
-**DB table:** `admin`  
-**Java class:** `com.dhbw.eurovision.entity.Admin`
-
-A show manager with elevated permissions. Can be assigned to manage one or more Shows.
-
-| Attribute | Column | Type | Constraints | Notes |
-|---|---|---|---|---|
-| `userId` (inherited) | `user_id` | `BIGINT` | **PK/FK** → `user.user_id` | Joined table |
-| `adminLevel` | `admin_level` | `INT` | nullable | Permission tier, e.g. 1 = super, 2 = standard |
-
-**Relationships:**
-
-| Relationship | Type | Target | Join Table | Notes |
-|---|---|---|---|---|
-| Manages | M:N | `Show` | `admin_show` | owning side |
-
----
-
-### 2.6 Song
-
-**EERM notation:** Rectangle  
-**DB table:** `song`  
-**Java class:** `com.dhbw.eurovision.entity.Song`
-
-A musical entry submitted by a Country. Each country submits exactly one song per contest year. A song can appear in multiple Shows and receives votes from Jury and Citizens.
-
-| Attribute | Column | Type | Constraints | Notes |
-|---|---|---|---|---|
-| `songId` | `song_id` | `BIGINT` | **PK**, AUTO_INCREMENT | |
-| `singerName` | `singer_name` | `VARCHAR(255)` | NOT NULL | Performing artist name |
-| `country` (FK) | `country_code` | `VARCHAR(3)` | NOT NULL, FK → `country` | Representing country |
-
-> **TODO:** Add `songTitle`, `language`, `runningOrder` once agreed.
-
-**Relationships:**
-
-| Relationship | Type | Target | Notes |
-|---|---|---|---|
-| Belongs to Country | M:1 | `Country` | FK `country_code` |
-| Has Score | 1:1 | `Score` | inverse side — Score owns the FK |
-| Receives Votes | 1:M | `VoteLog` | `vote_log.song_id` FK |
-| Appears in Shows | M:N | `Show` | join table `show_song` — inverse side |
-
----
-
-### 2.7 VoteLog
-
-**EERM notation:** Rectangle (associative entity for the "Votes" diamond)  
-**DB table:** `vote_log`  
-**Java class:** `com.dhbw.eurovision.entity.VoteLog`
-
-Records a single vote cast event. Acts as the resolved M:N between (Jury or Citizen) and Song. Exactly one of `jury_id` or `citizen_id` must be non-null per row — this represents either a jury vote or a public vote.
-
-| Attribute | Column | Type | Constraints | Notes |
-|---|---|---|---|---|
-| `voteLogId` | `vote_log_id` | `BIGINT` | **PK**, AUTO_INCREMENT | |
-| `points` | `points` | `INT` | NOT NULL | Eurovision scale: 12, 10, 8, 7, 6, 5, 4, 3, 2, 1 |
-| `song` (FK) | `song_id` | `BIGINT` | NOT NULL, FK → `song` | Song being voted for |
-| `jury` (FK) | `jury_id` | `BIGINT` | nullable, FK → `jury` | Set when jury vote |
-| `citizen` (FK) | `citizen_id` | `BIGINT` | nullable, FK → `citizen` | Set when public vote |
-
-> **Business rules:** (1) Exactly one of `jury_id` / `citizen_id` must be set. (2) `points` must be one of `{12, 10, 8, 7, 6, 5, 4, 3, 2, 1}`. (3) Voter's country must differ from the song's country — enforced in `VoteLogService`.
-
----
-
-### 2.8 Score
-
-**EERM notation:** Rectangle (result of "Calculate" diamond)  
-**DB table:** `score`  
-**Java class:** `com.dhbw.eurovision.entity.Score`
-
-Holds the aggregated total score for a Song. Calculated by summing all VoteLog entries for that song. One Score per Song (1:1). Score is never created directly — always via `ScoreService.calculateScoreForSong()`.
-
-| Attribute | Column | Type | Constraints | Notes |
-|---|---|---|---|---|
-| `scoreId` | `score_id` | `BIGINT` | **PK**, AUTO_INCREMENT | |
-| `songScore` | `song_score` | `INT` | NOT NULL, default 0 | Aggregated total points for this song in this show |
-| `song` (FK) | `song_id` | `BIGINT` | NOT NULL, FK → `song` | The song being scored |
-| `show` (FK) | `show_id` | `BIGINT` | NOT NULL, FK → `show` | The show this score belongs to |
-
-**Unique constraint:** `UNIQUE(song_id, show_id)` — one score per song per show. A song that appears in both a semi-final and the Grand Final has two independent Score rows. The relationship to Song is now **1:M** (one song, many show-scores), not 1:1.
-
-**Why this matters:** Without `show_id`, recalculating the Grand Final would overwrite the Semi-Final score, losing that data permanently.
-
----
-
-### 2.9 Show
-
-**EERM notation:** Rectangle  
-**DB table:** `show`  
-**Java class:** `com.dhbw.eurovision.entity.Show`
-
-An Eurovision broadcast event. The contest has three shows: Semi-Final 1, Semi-Final 2, and the Grand Final. Admins manage shows; Songs compete in shows.
-
-| Attribute | Column | Type | Constraints | Notes |
-|---|---|---|---|---|
-| `showId` | `show_id` | `BIGINT` | **PK**, AUTO_INCREMENT | |
-| `showName` | `show_name` | `VARCHAR(255)` | NOT NULL | e.g. `"Semi-Final 1"`, `"Grand Final"` |
-
-> **TODO:** Add `showDate DATE` and `showType ENUM('SEMI_FINAL_1','SEMI_FINAL_2','GRAND_FINAL')` once agreed.
-
-**Relationships:**
-
-| Relationship | Type | Target | Join Table | Notes |
-|---|---|---|---|---|
-| Contains Songs | M:N | `Song` | `show_song` | owning side |
-| Managed by Admins | M:N | `Admin` | `admin_show` | inverse side |
+Current TODO in code:
+- optional future fields `showDate`, `showType`
+
+### 2.8 `VoteLog`
+
+- **Table:** `vote_log`
+- **Class:** `com.dhbw.eurovision.entity.VoteLog`
+
+| Attribute | Column | Constraints |
+|---|---|---|
+| `voteLogId` | `vote_log_id` | PK, AUTO_INCREMENT |
+| `points` | `points` | NOT NULL |
+| `voteSessionId` | `vote_session_id` | NOT NULL, length 36 |
+| `song` | `song_id` | FK -> `song.song_id`, NOT NULL |
+| `show` | `show_id` | FK -> `shows.show_id`, NOT NULL |
+| `jury` | `jury_id` | FK -> `jury.user_id`, nullable |
+| `citizen` | `citizen_id` | FK -> `citizen.user_id`, nullable |
+
+Rules enforced in `VoteLogService.submitBallot()`:
+- exactly one voter type (`juryId` xor `citizenId`)
+- exactly 10 entries using points `{12,10,8,7,6,5,4,3,2,1}` each once
+- voter can submit only one ballot per show
+- no own-country voting
+- all voted songs must belong to the selected show
+- semifinal eligibility check: voter country must compete in that semifinal
+
+### 2.9 `Score`
+
+- **Table:** `score`
+- **Class:** `com.dhbw.eurovision.entity.Score`
+
+| Attribute | Column | Constraints |
+|---|---|---|
+| `scoreId` | `score_id` | PK, AUTO_INCREMENT |
+| `songScore` | `song_score` | NOT NULL, default 0 in entity |
+| `song` | `song_id` | FK -> `song.song_id`, NOT NULL |
+| `show` | `show_id` | FK -> `shows.show_id`, NOT NULL |
+
+Unique constraint:
+- `UNIQUE(song_id, show_id)` (`uq_score_song_show`)
+
+Meaning:
+- one score row per song per show
+- same song can have separate scores in semifinal and grand final
 
 ---
 
 ## 3. Relationship Catalogue
 
----
+### 3.1 Has - `Country` -> `User` (1:M)
 
-### 3.1 Has — Country → User (1:M)
+- FK: `user.country_code`
+- Implemented with `@ManyToOne` in `User` and `@OneToMany` in `Country`
 
-| Property | Value |
-|---|---|
-| EERM symbol | Diamond labelled **"Has"** |
-| Cardinality | 1 Country : M Users |
-| Direction | Country → User |
-| Implementation | `user.country_code` FK → `country.country_code` |
-| Cascade | ALL (delete country → delete its users) |
-| Fetch | LAZY |
+### 3.2 Is a - `User` -> `Jury` / `Citizen` / `Admin`
 
-One country has many registered users. Every User (Jury, Citizen, Admin) must belong to exactly one country.
+- Joined Table Inheritance
+- tables: `user`, `jury`, `citizen`, `admin`
+- subtype tables use shared `user_id` PK/FK
 
----
+### 3.3 Country -> Song (1:M)
 
-### 3.2 Is a — User → Jury | Citizen | Admin
+- FK: `song.country_code`
+- cascade configured from `Country.songs`
 
-| Property | Value |
-|---|---|
-| EERM symbol | Triangle labelled **"Is a"** |
-| Type | Total specialisation (every User is exactly one subtype) |
-| Strategy | **Joined Table Inheritance** |
-| Tables | `user` (base) + `jury`, `citizen`, `admin` (subtypes) |
-| Join key | `user_id` shared as PK/FK across all four tables |
+### 3.4 Votes - voter -> `VoteLog` -> `Song`
 
-Each User is specialised into exactly one of three subtypes. The `user` table holds shared data; subtype tables extend it with type-specific attributes.
+- `VoteLog` resolves voting relationships
+- voter is either jury or citizen per row
+- rows are grouped into one ballot using `vote_session_id`
 
----
+### 3.5 Calculate - `VoteLog` -> `Score`
 
-### 3.3 Country → Song (1:M)
+- implemented in `ScoreService`
+- `calculateShowScores(showId)`:
+  - semifinals: citizen aggregation only
+  - grand final: jury aggregation + citizen aggregation
+- both jury and citizen use country-based ranking aggregation with Eurovision scale
 
-| Property | Value |
-|---|---|
-| Cardinality | 1 Country : M Songs |
-| Implementation | `song.country_code` FK → `country.country_code` |
-| Cascade | ALL |
-| Fetch | LAZY |
+### 3.6 Song <-> Show (M:N)
 
-Each song represents exactly one country. A country may have multiple song entries (across different years or heats, depending on business rules).
+- join table: `show_song` (`show_id`, `song_id`)
+- owning side: `Show.songs`
 
----
+### 3.7 Manage - Admin <-> Show (M:N)
 
-### 3.4 Votes — Jury/Citizen → VoteLog → Song (M:N)
-
-| Property | Value |
-|---|---|
-| EERM symbol | Diamond labelled **"Votes"** |
-| Cardinality | M (Jury or Citizen) : M Songs |
-| Resolution | Associative entity **VoteLog** |
-| FKs in VoteLog | `jury_id` nullable, `citizen_id` nullable, `song_id` NOT NULL |
-
-The "Votes" diamond is resolved into the `vote_log` table. Each row is one vote event. The voter is identified by either `jury_id` OR `citizen_id` — never both.
-
----
-
-### 3.5 Calculate — VoteLog → Score
-
-| Property | Value |
-|---|---|
-| EERM symbol | Diamond labelled **"Calculate"** |
-| Type | Derived / aggregation relationship |
-| Cardinality | M VoteLogs → 1 Score (per Song **per Show**) |
-| Implementation | `ScoreService.calculateShowScores()` aggregates VoteLogs → writes `score.song_score` |
-| DB | `UNIQUE(song_id, show_id)` in `score` table |
-
-Score is anchored to both Song **and** Show. A song appearing in Semi-Final 1 and the Grand Final will have two independent Score rows — one per show. This prevents Grand Final calculation from overwriting the semi-final result.
-
-The Calculate diamond is a business logic operation: `ScoreService.calculateShowScores(showId)` aggregates all VoteLogs for the show using national aggregation (for both jury and citizen), then upserts one Score row per song in that show.
-
----
-
-### 3.6 Song ↔ Show (M:N)
-
-| Property | Value |
-|---|---|
-| Cardinality | M Songs : M Shows |
-| Join table | `show_song` (`show_id`, `song_id`) |
-| Owning side | `Show` entity |
-| Inverse side | `Song.shows` |
-
-A song can be assigned to multiple shows (e.g. a semi-final and the grand final). A show contains multiple songs.
-
----
-
-### 3.7 Manage — Admin ↔ Show (M:N)
-
-| Property | Value |
-|---|---|
-| EERM symbol | Diamond labelled **"Manage"** |
-| Cardinality | M Admins : M Shows |
-| Join table | `admin_show` (`admin_user_id`, `show_id`) |
-| Owning side | `Admin.managedShows` |
-| Inverse side | `Show.admins` |
-| Endpoint | `POST /api/admins/{adminId}/shows/{showId}` |
-
-One admin can manage multiple shows; one show can be managed by multiple admins.
+- join table: `admin_show` (`admin_user_id`, `show_id`)
+- owning side: `Admin.managedShows`
+- exposed by endpoint: `POST /api/admins/{adminId}/shows/{showId}`
 
 ---
 
 ## 4. Database Tables
 
-| Table | PK | Description |
+| Table | PK | Notes |
 |---|---|---|
-| `country` | `country_code` | Participating nations |
-| `user` | `user_id` | Base user table (JTI parent) |
-| `jury` | `user_id` (FK/PK) | Jury subtype |
-| `citizen` | `user_id` (FK/PK) | Citizen subtype |
-| `admin` | `user_id` (FK/PK) | Admin subtype |
-| `song` | `song_id` | Contest entries |
-| `vote_log` | `vote_log_id` | Individual vote events |
-| `score` | `score_id` | Aggregated scores per song |
-| `show` | `show_id` | Contest broadcast events |
+| `country` | `country_code` | countries |
+| `user` | `user_id` | base user table |
+| `jury` | `user_id` | user subtype |
+| `citizen` | `user_id` | user subtype, includes `phone_number` |
+| `admin` | `user_id` | user subtype |
+| `song` | `song_id` | songs |
+| `shows` | `show_id` | shows |
+| `vote_log` | `vote_log_id` | vote rows |
+| `score` | `score_id` | aggregated scores |
+
+Join tables:
+
+| Join Table | Columns |
+|---|---|
+| `show_song` | `show_id`, `song_id` |
+| `admin_show` | `admin_user_id`, `show_id` |
 
 ---
 
-## 5. Join Tables
+## 5. Notes and TODOs (from source code)
 
-| Join Table | Column 1 | Column 2 | Resolves |
-|---|---|---|---|
-| `show_song` | `show_id` FK → `show` | `song_id` FK → `song` | Song ↔ Show M:N |
-| `admin_show` | `admin_user_id` FK → `admin` | `show_id` FK → `show` | Admin ↔ Show M:N |
-
----
-
-## 6. Inheritance Tables (JTI)
-
-Joined Table Inheritance means `user_id` is the shared key across four tables:
-
-```
-user          jury               citizen          admin
-──────────    ───────────────    ─────────────    ──────────────────
-user_id (PK)  user_id (PK/FK)   user_id (PK/FK)  user_id (PK/FK)
-country_code  professional_bg   (no extra cols)   admin_level
-```
-
-A query for a `Jury` record does: `SELECT * FROM user JOIN jury USING (user_id) WHERE user_id = ?`
-
----
-
-## 7. Design Decisions & TODOs
-
-| # | Decision / TODO | Reason |
-|---|---|---|
-| 1 | Joined Table Inheritance for User subtypes | Cleaner DB schema; each subtype's attributes are in its own table; easier to query one type independently |
-| 2 | `country_code` as String PK (not BIGINT) | ISO codes are natural, stable, and human-readable — no surrogate key needed |
-| 3 | `VoteLog.jury_id` and `citizen_id` both nullable | One row = one vote; voter type determined by which FK is set |
-| 4 | Score is calculated, not inserted directly | Keeps score in sync with VoteLog; prevents manual tampering |
-| 5 | TODO: Add `User.username` + `User.email` | Required for authentication — deferred until auth layer is designed |
-| 6 | `VoteLog.points` implemented ✅ | Scale: 12,10,8,7,6,5,4,3,2,1. One ballot = 10 rows with `vote_session_id` grouping them. |
-| 7 | TODO: Add `Show.showDate`, `showType` | Show schedule/type not yet confirmed by team |
-| 8 | TODO: Add `Song.songTitle`, `language` | Extended song metadata deferred to next sprint |
-| 9 | `Citizen.phone_number` as natural key | Phone number is the real-world voter identity. `userId` remains PK for DB integrity but phone is the business key. |
-| 10 | `VoteLog.show_id` FK | Required for show-eligibility validation and one-ballot-per-show enforcement. |
-| 11 | `Score` is per (song, show) not per song | A song competing in a semi-final and the Grand Final has different scores in each. Using only song_id as FK would cause recalculation to overwrite earlier show results. |
+- `User`: potential future shared fields `username`, `email`
+- `Song`: potential future fields `songTitle`, `language`
+- `Show`: potential future fields `showDate`, `showType`
+- there is no global `@ControllerAdvice` yet; many service errors still bubble as default error responses

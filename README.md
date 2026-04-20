@@ -1,11 +1,11 @@
 # Databases_Eurovision_project
 
-## 🎤 Eurovision Song Contest 2026 – Database Project
+## 🎤 Eurovision Song Contest 2025 – Database Project
 
-Welcome to our Eurovision-inspired database project!  
-This project is part of our databases course and focuses on designing and implementing a full voting system for the **Eurovision Song Contest 2026**.
+Welcome to our Eurovision-inspired database project!
+This project is part of our databases course and focuses on designing and implementing a full voting system for the **Eurovision Song Contest 2025**.
 
-We aim to model, store, and process voting data from both **jury** and **public** votes across all shows — just like the real contest.
+We aim to model, store, and process voting data from both **jury** and **public** votes across all shows like the real contest.
 
 ---
 
@@ -22,12 +22,12 @@ The main objective of this project is to design and implement a complete voting 
 - Supporting:
   - Jury voting
   - Public voting
-  - All Eurovision shows
 - Reading and displaying results for all shows
 
 ---
 
 ## 🛠️ Features
+
 
 - 🗳️ Add votes (Jury & Public)
 - 🔢 Automatic vote counting
@@ -35,14 +35,42 @@ The main objective of this project is to design and implement a complete voting 
 - 📊 Retrieve full results for each show
 - 🧪 Final live test with class participation
 
+Spring Boot backend for a Eurovision-style voting system with:
+- countries, songs, users (jury/citizen/admin), shows
+- ballot submission (10 ranked point entries)
+- score calculation per show
+- Docker-based local setup and optional static frontend
+
 ---
 
 ## 🧱 Tech Stack
-
-- **Backend:** Spring Boot
-- **Database:** MySQL
+- Java 17+
+- **Backend:** Spring Boot 3.2
+- Spring Data JPA / Hibernate
+- **Database:** MySQL 8 (runtime) and H2 (tests)
 - **Containerization:** Docker
 - **Version Control:** GitHub
+---
+
+## What is implemented
+- CRUD APIs for `countries`, `songs`, `shows`, `jury`, `citizens`, `admins`
+- M:N assignment APIs:
+  - `POST /api/shows/{showId}/songs/{songId}`
+  - `POST /api/admins/{adminId}/shows/{showId}`
+- Ballot voting API:
+  - `POST /api/votes/session` (one full ballot = 10 entries)
+- Vote validation rules in service layer:
+  - one ballot per voter per show
+  - no own-country voting
+  - songs must belong to selected show
+  - semifinal eligibility checks
+- Score APIs:
+  - `GET /api/scores`
+  - `GET /api/scores/show/{showId}`
+  - `GET /api/scores/song/{songId}`
+  - `POST /api/scores/calculate-show/{showId}`
+  - `POST /api/scores/calculate/{showId}/{songId}`
+  - `POST /api/scores/calculate-all`
 
 ---
 
@@ -51,99 +79,44 @@ The main objective of this project is to design and implement a complete voting 
 - ✅ Spring Boot project (Dockerized)
 - ✅ GitHub repository
 - ✅ EERM diagram (PDF format)
-- ❌ Frontend *(not required)*
+- ✅ Frontend *Provisional*
+
+## Scoring model (as implemented)
+- Point scale per ballot: `12,10,8,7,6,5,4,3,2,1`
+- Votes are stored in `vote_log` rows and grouped by `vote_session_id`
+- Scores are stored per `(song, show)` in `score` (`UNIQUE(song_id, show_id)`)
+- `calculateShowScores(showId)` logic:
+  - Grand Final: jury aggregation + citizen aggregation
+  - Semi-finals: citizen aggregation only
+- Both jury and citizen aggregation are country-based:
+  raw points are summed per country and then converted to Eurovision top-10 scale
+
 
 ---
 
-## 🧪 Testing Scenario
-
-In the final lecture:
-
-- Each student will participate as either:
-  - 🎤 **Jury member**, or
-  - 🌍 **Public voter** representing a country
-- Votes will be submitted into the system
-- The system must:
-  - Count all votes correctly
-  - Calculate final points
-  - Output accurate rankings
-
----
-
-## 🧮 Eurovision Scoring System
-
-The project follows the traditional Eurovision voting format:
-
-Each country awards two sets of points:
-- **Jury votes**
-- **Public votes**
-
-For each voting group, points are assigned as follows:
-
-| Rank | Points |
-|------|--------|
-| 1st  | 12     |
-| 2nd  | 10     |
-| 3rd  | 8      |
-| 4th  | 7      |
-| 5th  | 6      |
-| 6th  | 5      |
-| 7th  | 4      |
-| 8th  | 3      |
-| 9th  | 2      |
-| 10th | 1      |
-
-- Countries **cannot vote for themselves**
-- Points from all countries are aggregated to determine final rankings
-
----
-
-## 🚀 Getting Started
-
+## Run locally Linux/macOS
 ### Prerequisites
 
-- Java (version 17+)
-- Docker
-- MySQL 
-
-### Setup
+- Java 17+
+- Docker (or Podman socket compatibility)
+- Python 3 (for seed script)
 
 
-# Clone the repository
-``` git clone <REPO_LINK> ```
+```bash
+cd Databases_Eurovision_project
+chmod +x start.sh
+./start.sh --seed --frontend
+```
 
-# Navigate into the project
-```cd Databases_Eurovision_project```
+#### Parrot OS (Podman)
 
-# Run on Linux/MacOS
-```chmod +x start.sh```
- 
-```./start.sh --seed --frontend```
+```bash
+systemctl --user start podman.socket
+./start.sh --seed --frontend
+```
 
-## using Parrot OS
-Start the Podman socket (needed once per session) before running the script:
-```systemctl --user start podman.socket```
+### Useful commands
 
-# Run on Windows
-Prerequisites (Windows)
-- Docker Desktop installed and running (the script checks this and gives a clear error if it's not)
-- Python 3 installed from python.org — tick "Add Python to PATH" during install
-
-How to run (Command Prompt or PowerShell)
-bat:: Start + seed
-```start.bat --seed --frontend```
-
-:: Stop containers
-```start.bat --stop```
-
-:: Wipe DB and start fresh
-```start.bat --reset --seed```
-
-:: Tail logs after startup
-```start.bat --seed --logs```
-Then run script: ```./start.sh --seed```
-
-# 🔧 Other useful commands
 ```./start.sh``` Start without seeding
 
 ```./start.sh --seed``` Start + load seed-data.json
@@ -158,6 +131,33 @@ Then run script: ```./start.sh --seed```
 
 ```docker compose logs -f app``` Watch Spring Boot logs
 
-# ✏️ To customise the seed data
-Just edit scripts/seed-data.json — it has all 37 Eurovision 2025 countries, all competing artists, jury members, citizens, and admins pre-filled. Run python3 scripts/seed.py any time to re-push it to a running instance.
 
+## Run locally Windows
+### Prerequisites
+- Docker Desktop installed and running (the script checks this and gives a clear error if it's not)
+- Python 3 installed from python.org — tick "Add Python to PATH" during install
+  
+(Command Prompt or PowerShell)
+
+Start + seed: ```start.bat --seed --frontend``` 
+
+### Useful commands
+
+Stop containers ```start.bat --stop```
+
+Wipe DB and start fresh ```start.bat --reset --seed```
+
+Tail logs after startup ```start.bat --seed --logs```
+
+Then run script: ```./start.sh --seed```
+
+
+## Docs
+- EERM text: `docs/EERM_doc.md`
+- EERM mermaid: `docs/EERM.mermaid`
+- API reference: `docs/API_doc.md`
+
+## Current gaps / next improvements
+- add global exception mapping (`@ControllerAdvice`) for consistent HTTP errors
+- add auth/security (Spring Security)
+- add richer show/song metadata
