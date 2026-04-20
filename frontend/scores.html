@@ -14,18 +14,7 @@
       flex-wrap: wrap;
     }
     .toolbar .form-group { flex: 1; min-width: 200px; margin: 0; }
-    .total-votes {
-      font-size: 0.8rem;
-      color: #aaa;
-      text-align: right;
-      margin-bottom: 10px;
-    }
-    .no-scores {
-      text-align: center;
-      padding: 40px;
-      color: #666;
-      font-size: 0.9rem;
-    }
+
     .recalc-bar {
       background: #111133;
       border: 1px solid #2a2a6e;
@@ -38,9 +27,67 @@
       gap: 12px;
       flex-wrap: wrap;
     }
-    .recalc-bar span {
-      font-size: 0.85rem;
-      color: #aaa;
+    .recalc-bar span { font-size: 0.82rem; color: #aaa; line-height: 1.6; }
+
+    .no-scores {
+      text-align: center;
+      padding: 40px;
+      color: #666;
+      font-size: 0.9rem;
+    }
+
+    .stats-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+    .stat-box {
+      background: #0a0a2e;
+      border: 1px solid #2a2a6e;
+      border-radius: 8px;
+      padding: 14px;
+      text-align: center;
+    }
+    .stat-box .val {
+      font-size: 1.8rem;
+      font-weight: 900;
+      color: #f5c400;
+      line-height: 1;
+    }
+    .stat-box .lbl {
+      font-size: 0.72rem;
+      color: #666;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      margin-top: 4px;
+    }
+
+    .score-bar-wrap {
+      width: 80px;
+      background: #0a0a2e;
+      border-radius: 4px;
+      height: 8px;
+      overflow: hidden;
+      display: inline-block;
+      vertical-align: middle;
+      margin-left: 8px;
+    }
+    .score-bar {
+      height: 100%;
+      background: #f5c400;
+      border-radius: 4px;
+      transition: width 0.4s;
+    }
+
+    .show-pill {
+      display: inline-block;
+      background: #1a1a6e;
+      border: 1px solid #2a2a6e;
+      border-radius: 20px;
+      padding: 3px 12px;
+      font-size: 0.75rem;
+      color: #aac4ff;
     }
   </style>
 </head>
@@ -59,11 +106,16 @@
 
 <main>
 
-  <!-- Recalculate all bar -->
   <div class="recalc-bar">
-    <span>Scores are calculated from the vote_log table in real time.</span>
-    <button class="btn btn-secondary" id="btnRecalcAll" style="padding:8px 18px;font-size:0.85rem;">
-      ↻ Recalculate Scores
+    <span>
+      <strong style="color:#f5c400">How scores work:</strong><br>
+      Grand Final = jury (national aggregation) + televote (national aggregation)<br>
+      Semi-Finals = televote only (national aggregation)<br>
+      Each country contributes one set of 12→1 points regardless of voter count.
+    </span>
+    <button class="btn btn-secondary" id="btnRecalcAll"
+            style="padding:8px 18px;font-size:0.85rem;white-space:nowrap;">
+      ↻ Recalculate All Shows
     </button>
   </div>
 
@@ -72,26 +124,44 @@
 
     <div class="toolbar">
       <div class="form-group">
-        <label>Filter by Show</label>
+        <label>Show</label>
         <select id="showFilter">
-          <option value="">All Shows</option>
+          <option value="">— select a show —</option>
         </select>
       </div>
-      <button class="btn btn-primary" id="btnRefresh" style="padding:10px 20px;">
+      <button class="btn btn-primary" id="btnRefresh"
+              style="padding:10px 20px;white-space:nowrap;">
         ↻ Refresh
+      </button>
+      <button class="btn btn-secondary" id="btnRecalcShow"
+              style="padding:10px 20px;white-space:nowrap;display:none;">
+        ↻ Recalculate This Show
       </button>
     </div>
 
     <div id="msgScores" class="msg"></div>
-    <div class="total-votes" id="totalInfo"></div>
+
+    <div class="stats-row" id="statsRow" style="display:none">
+      <div class="stat-box">
+        <div class="val" id="statBallots">—</div>
+        <div class="lbl">Ballots Cast</div>
+      </div>
+      <div class="stat-box">
+        <div class="val" id="statVoters">—</div>
+        <div class="lbl">Unique Voters</div>
+      </div>
+      <div class="stat-box">
+        <div class="val" id="statSongs">—</div>
+        <div class="lbl">Songs Scored</div>
+      </div>
+    </div>
 
     <div id="tableContainer">
-      <div class="loading">Loading scores</div>
+      <div class="no-scores">Select a show to see its leaderboard.</div>
     </div>
   </div>
 
-  <!-- Songs without scores -->
-  <div class="card" id="unscored" style="display:none">
+  <div class="card" id="unscoredCard" style="display:none">
     <h2>Songs with no votes yet</h2>
     <div id="unscoredList"></div>
   </div>
@@ -106,138 +176,203 @@
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return r.json();
   }
-
   async function apiPost(path) {
-    const r = await fetch(API + path, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+    const r = await fetch(API + path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: '{}'
+    });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     return r.json();
   }
 
-  function showMsg(type, text) {
+  function showMsg(type, text, autohide = false) {
     const el = document.getElementById('msgScores');
     el.className = `msg msg-${type} show`;
     el.textContent = text;
-    if (type !== 'error') setTimeout(() => el.className = 'msg', 3000);
+    if (autohide) setTimeout(() => { el.className = 'msg'; }, 3000);
   }
 
-  // ── Load shows into filter dropdown ──────────────────────────────────
+  // ── Load shows ────────────────────────────────────────────────────
+  let showsData = [];
   async function loadShows() {
     try {
-      const shows = await apiFetch('/shows');
+      showsData = await apiFetch('/shows');
       const sel = document.getElementById('showFilter');
-      shows.forEach(s => {
+      showsData.forEach(s => {
         const opt = document.createElement('option');
         opt.value = s.showId;
         opt.textContent = s.showName || `Show #${s.showId}`;
+        opt.dataset.songIds = JSON.stringify(s.songIds || []);
         sel.appendChild(opt);
       });
-    } catch(e) { /* silently ignore */ }
+    } catch(e) { /* ignore */ }
   }
 
-  // ── Load and render leaderboard ───────────────────────────────────────
-  async function loadScores() {
+  // ── Show filter change ────────────────────────────────────────────
+  document.getElementById('showFilter').addEventListener('change', function() {
+    const hasShow = !!this.value;
+    document.getElementById('btnRecalcShow').style.display = hasShow ? 'block' : 'none';
+    if (hasShow) loadScores(parseInt(this.value));
+    else {
+      document.getElementById('tableContainer').innerHTML =
+              '<div class="no-scores">Select a show to see its leaderboard.</div>';
+      document.getElementById('statsRow').style.display = 'none';
+      document.getElementById('unscoredCard').style.display = 'none';
+    }
+  });
+
+  // ── Load and render leaderboard for a show ────────────────────────
+  async function loadScores(showId) {
     const container = document.getElementById('tableContainer');
-    const totalInfo = document.getElementById('totalInfo');
     container.innerHTML = '<div class="loading">Loading scores</div>';
-    totalInfo.textContent = '';
+    document.getElementById('statsRow').style.display = 'none';
 
     try {
-      const [scores, songs, votes] = await Promise.all([
-        apiFetch('/scores'),
-        apiFetch('/songs'),
-        apiFetch('/votes')
+      // Fetch scores for this show and all votes for this show
+      const [scores, votes, songs] = await Promise.all([
+        apiFetch(`/scores/show/${showId}`),
+        apiFetch('/votes'),
+        apiFetch('/songs')
       ]);
+
+      // Filter votes to this show
+      const showVotes = votes.filter(v => v.showId === showId);
 
       // Build song lookup
       const songMap = {};
       songs.forEach(s => { songMap[s.songId] = s; });
 
-      // Sort scores descending
-      const sorted = [...scores].sort((a, b) => b.songScore - a.songScore);
+      // Stats
+      const sessions = new Set(showVotes.map(v => v.voteSessionId)).size;
+      const voters   = new Set([
+        ...showVotes.filter(v => v.juryId).map(v => `j${v.juryId}`),
+        ...showVotes.filter(v => v.citizenId).map(v => `c${v.citizenId}`)
+      ]).size;
+      document.getElementById('statBallots').textContent = sessions;
+      document.getElementById('statVoters').textContent  = voters;
+      document.getElementById('statSongs').textContent   = scores.length;
+      if (sessions > 0 || scores.length > 0) {
+        document.getElementById('statsRow').style.display = 'grid';
+      }
 
-      totalInfo.textContent = `${votes.length} total votes · ${scores.length} songs scored`;
-
-      if (sorted.length === 0) {
-        container.innerHTML = '<div class="no-scores">No scores yet — cast some votes first!</div>';
+      if (scores.length === 0) {
+        container.innerHTML =
+                '<div class="no-scores">No scores yet for this show.<br>' +
+                '<a href="vote.html" style="color:#f5c400;text-decoration:none;' +
+                'margin-top:10px;display:inline-block;">→ Cast some votes first</a></div>';
+        document.getElementById('unscoredCard').style.display = 'none';
         return;
       }
 
-      // Build table
+      // Scores are already sorted descending by the service
+      const maxScore = scores[0].songScore || 1;
+
       const table = document.createElement('table');
-      table.innerHTML = `
-        <thead>
-          <tr>
-            <th>#</th>
-            <th>Singer</th>
-            <th>Country</th>
-            <th>Score</th>
-          </tr>
-        </thead>`;
+      table.innerHTML = `<thead><tr>
+        <th>#</th>
+        <th>Singer</th>
+        <th>Country</th>
+        <th>Score</th>
+      </tr></thead>`;
 
       const tbody = document.createElement('tbody');
-      sorted.forEach((score, idx) => {
+      scores.forEach((score, idx) => {
         const rank = idx + 1;
+        const pct  = Math.round((score.songScore / maxScore) * 100);
+        // Use singerName/countryCode from enriched DTO, fall back to song map
         const song = songMap[score.songId] || {};
+        const singer  = score.singerName  || song.singerName  || '—';
+        const country = score.countryCode || song.countryCode || '—';
+
         const tr = document.createElement('tr');
         tr.innerHTML = `
-          <td class="rank rank-${rank}">${rank}</td>
-          <td>${song.singerName || '—'}</td>
-          <td>${song.countryCode || '—'}</td>
-          <td><span class="score-badge">${score.songScore}</span></td>`;
+          <td class="rank rank-${rank <= 3 ? rank : ''}">${rank}</td>
+          <td>${singer}</td>
+          <td>${country}</td>
+          <td>
+            <span class="score-badge">${score.songScore}</span>
+            <span class="score-bar-wrap">
+              <span class="score-bar" style="width:${pct}%"></span>
+            </span>
+          </td>`;
         tbody.appendChild(tr);
       });
-
       table.appendChild(tbody);
       container.innerHTML = '';
       container.appendChild(table);
 
-      // Show unscored songs
-      const scoredIds = new Set(scores.map(s => s.songId));
-      const unscored  = songs.filter(s => !scoredIds.has(s.songId));
-      const box = document.getElementById('unscored');
+      // Find songs in this show that have no score yet
+      const showSongIds = (showsData.find(s => s.showId === showId)?.songIds) || [];
+      const scoredIds   = new Set(scores.map(s => s.songId));
+      const unscored    = showSongIds
+              .filter(id => !scoredIds.has(id))
+              .map(id => songMap[id])
+              .filter(Boolean);
+
+      const card = document.getElementById('unscoredCard');
       if (unscored.length > 0) {
-        box.style.display = 'block';
-        document.getElementById('unscoredList').innerHTML =
-                unscored.map(s => `<div style="padding:6px 0;border-bottom:1px solid #1a1a4e;color:#aaa;">${s.singerName} <span style="color:#666">(${s.countryCode})</span></div>`).join('');
+        card.style.display = 'block';
+        document.getElementById('unscoredList').innerHTML = unscored
+                .map(s => `<div style="padding:6px 0;border-bottom:1px solid #1a1a4e;color:#aaa;">
+            ${s.singerName} <span style="color:#666">(${s.countryCode})</span></div>`)
+                .join('');
       } else {
-        box.style.display = 'none';
+        card.style.display = 'none';
       }
 
+      document.getElementById('msgScores').className = 'msg';
+
     } catch(e) {
-      container.innerHTML = `<div class="msg msg-error show">Failed to load scores: ${e.message}<br>Make sure the API is running at ${API}</div>`;
+      container.innerHTML =
+              `<div class="msg msg-error show">
+          Failed to load scores: ${e.message}<br>
+          Make sure the API is running at ${API}
+         </div>`;
     }
   }
 
-  // ── Recalculate all scores ────────────────────────────────────────────
-  document.getElementById('btnRecalcAll').addEventListener('click', async () => {
-    const btn     = document.getElementById('btnRecalcAll');
-    const showId  = document.getElementById('showFilter').value;
-    btn.disabled  = true;
-    btn.textContent = 'Recalculating...';
+  // ── Recalculate this show ─────────────────────────────────────────
+  document.getElementById('btnRecalcShow').addEventListener('click', async () => {
+    const showId = document.getElementById('showFilter').value;
+    if (!showId) return;
+    const btn = document.getElementById('btnRecalcShow');
+    btn.disabled = true; btn.textContent = 'Recalculating...';
     try {
-      if (showId) {
-        await apiPost(`/scores/calculate-show/${showId}`);
-        showMsg('success', '✓ Show scores recalculated.');
-      } else {
-        await apiPost('/scores/calculate-all');
-        showMsg('success', '✓ All scores recalculated.');
-      }
-      await loadScores();
+      await apiPost(`/scores/calculate-show/${showId}`);
+      showMsg('success', '✓ Show scores recalculated.', true);
+      await loadScores(parseInt(showId));
     } catch(e) {
-      showMsg('error', 'Recalculation failed: ' + e.message);
+      showMsg('error', 'Failed: ' + e.message);
     } finally {
-      btn.disabled = false;
-      btn.textContent = '↻ Recalculate Scores';
+      btn.disabled = false; btn.textContent = '↻ Recalculate This Show';
     }
   });
 
-  // ── Refresh button ────────────────────────────────────────────────────
-  document.getElementById('btnRefresh').addEventListener('click', loadScores);
+  // ── Recalculate all ───────────────────────────────────────────────
+  document.getElementById('btnRecalcAll').addEventListener('click', async () => {
+    const btn = document.getElementById('btnRecalcAll');
+    btn.disabled = true; btn.textContent = 'Recalculating...';
+    try {
+      await apiPost('/scores/calculate-all');
+      showMsg('success', '✓ All show scores recalculated.', true);
+      const showId = document.getElementById('showFilter').value;
+      if (showId) await loadScores(parseInt(showId));
+    } catch(e) {
+      showMsg('error', 'Recalculation failed: ' + e.message);
+    } finally {
+      btn.disabled = false; btn.textContent = '↻ Recalculate All Shows';
+    }
+  });
 
-  // ── Init ──────────────────────────────────────────────────────────────
+  // ── Refresh ───────────────────────────────────────────────────────
+  document.getElementById('btnRefresh').addEventListener('click', () => {
+    const showId = document.getElementById('showFilter').value;
+    if (showId) loadScores(parseInt(showId));
+  });
+
+  // ── Init ──────────────────────────────────────────────────────────
   loadShows();
-  loadScores();
 </script>
-
 </body>
 </html>
