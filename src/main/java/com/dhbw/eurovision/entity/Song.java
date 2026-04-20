@@ -45,9 +45,13 @@ public class Song {
     @JoinColumn(name = "country_code", nullable = false)
     private Country country;
 
-    /** 1:1 — the calculated Score for this Song ("Calculate" in EERM) */
-    @OneToOne(mappedBy = "song", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private Score score;
+    /**
+     * 1:M — one Score per show this song appears in.
+     * E.g. Semi-Final score and Grand Final score are separate rows.
+     * Implements the "Calculate" diamond from the EERM.
+     */
+    @OneToMany(mappedBy = "song", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Score> scores = new ArrayList<>();
 
     /** All individual vote entries for this song */
     @OneToMany(mappedBy = "song", cascade = CascadeType.ALL, fetch = FetchType.LAZY)

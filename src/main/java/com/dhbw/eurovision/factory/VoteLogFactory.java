@@ -2,10 +2,7 @@ package com.dhbw.eurovision.factory;
 
 import com.dhbw.eurovision.dto.request.VoteLogRequestDTO;
 import com.dhbw.eurovision.dto.response.VoteLogResponseDTO;
-import com.dhbw.eurovision.entity.Citizen;
-import com.dhbw.eurovision.entity.Jury;
-import com.dhbw.eurovision.entity.Song;
-import com.dhbw.eurovision.entity.VoteLog;
+import com.dhbw.eurovision.entity.*;
 import org.springframework.stereotype.Component;
 
 /**
@@ -15,22 +12,27 @@ import org.springframework.stereotype.Component;
 @Component
 public class VoteLogFactory {
 
-    public VoteLog toEntity(VoteLogRequestDTO dto, Song song, Jury jury, Citizen citizen) {
-        VoteLog voteLog = new VoteLog();
-        voteLog.setSong(song);
-        voteLog.setJury(jury);
-        voteLog.setCitizen(citizen);
-        voteLog.setPoints(dto.getPoints());
-        return voteLog;
+    public VoteLog toEntity(String sessionId, Show show, Song song,
+                            Integer points, Jury jury, Citizen citizen) {
+        VoteLog vl = new VoteLog();
+        vl.setVoteSessionId(sessionId);
+        vl.setShow(show);
+        vl.setSong(song);
+        vl.setPoints(points);
+        vl.setJury(jury);
+        vl.setCitizen(citizen);
+        return vl;
     }
 
-    public VoteLogResponseDTO toResponseDTO(VoteLog voteLog) {
+    public VoteLogResponseDTO toResponseDTO(VoteLog vl) {
         return new VoteLogResponseDTO(
-                voteLog.getVoteLogId(),
-                voteLog.getSong() != null ? voteLog.getSong().getSongId() : null,
-                voteLog.getJury() != null ? voteLog.getJury().getUserId() : null,
-                voteLog.getCitizen() != null ? voteLog.getCitizen().getUserId() : null,
-                voteLog.getPoints()
+                vl.getVoteLogId(),
+                vl.getSong()    != null ? vl.getSong().getSongId()       : null,
+                vl.getShow()    != null ? vl.getShow().getShowId()       : null,
+                vl.getJury()    != null ? vl.getJury().getUserId()       : null,
+                vl.getCitizen() != null ? vl.getCitizen().getUserId()    : null,
+                vl.getPoints(),
+                vl.getVoteSessionId()
         );
     }
 }

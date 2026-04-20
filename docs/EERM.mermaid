@@ -3,9 +3,9 @@ title: Eurovision 2025 — Enhanced Entity Relationship Model (EERM)
 ---
 erDiagram
 
-    %% ─────────────────────────────────────────────
-    %% ENTITIES
-    %% ─────────────────────────────────────────────
+%% ─────────────────────────────────────────────
+%% ENTITIES
+%% ─────────────────────────────────────────────
 
     COUNTRY {
         string country_code PK "ISO alpha-2, e.g. DE"
@@ -18,16 +18,17 @@ erDiagram
     }
 
     JURY {
-        bigint user_id       PK_FK "FK/PK → user"
+        bigint user_id       PK, FK "FK/PK → user"
         string professional_bg     "e.g. Music Producer"
     }
 
     CITIZEN {
-        bigint user_id PK_FK "FK/PK → user"
+        bigint user_id      PK, FK "FK/PK → user"
+        string phone_number       "UNIQUE NOT NULL — voter identity"
     }
 
     ADMIN {
-        bigint user_id    PK_FK "FK/PK → user"
+        bigint user_id    PK, FK "FK/PK → user"
         int    admin_level       "Permission tier: 1=super, 2=standard"
     }
 
@@ -38,17 +39,20 @@ erDiagram
     }
 
     VOTE_LOG {
-        bigint vote_log_id  PK  "AUTO_INCREMENT"
-        int    points           "Eurovision scale: 12,10,8,7,6,5,4,3,2,1 — NOT NULL"
-        bigint song_id       FK "FK → song — NOT NULL"
-        bigint jury_id       FK "FK → jury — nullable (jury vote)"
-        bigint citizen_id    FK "FK → citizen — nullable (public vote)"
+        bigint vote_log_id    PK  "AUTO_INCREMENT"
+        int    points             "Eurovision scale: 12,10,8,7,6,5,4,3,2,1 — NOT NULL"
+        string vote_session_id    "UUID grouping 10 rows per ballot — NOT NULL"
+        bigint song_id         FK "FK → song — NOT NULL"
+        bigint show_id         FK "FK → show — NOT NULL"
+        bigint jury_id         FK "FK → jury — nullable (jury vote)"
+        bigint citizen_id      FK "FK → citizen — nullable (televote)"
     }
 
     SCORE {
         bigint score_id   PK  "AUTO_INCREMENT"
         int    song_score      "Aggregated total points — default 0"
-        bigint song_id     FK "FK → song — UNIQUE NOT NULL"
+        bigint song_id     FK "FK → song — NOT NULL"
+        bigint show_id     FK "FK → show — NOT NULL"
     }
 
     SHOW {
@@ -56,9 +60,9 @@ erDiagram
         string show_name    "e.g. Semi-Final 1, Grand Final — NOT NULL"
     }
 
-    %% ─────────────────────────────────────────────
-    %% JOIN TABLES (M:N resolutions)
-    %% ─────────────────────────────────────────────
+%% ─────────────────────────────────────────────
+%% JOIN TABLES (M:N resolutions)
+%% ─────────────────────────────────────────────
 
     SHOW_SONG {
         bigint show_id  FK "FK → show"
@@ -70,46 +74,51 @@ erDiagram
         bigint show_id       FK "FK → show"
     }
 
-    %% ─────────────────────────────────────────────
-    %% RELATIONSHIPS
-    %% ─────────────────────────────────────────────
+%% ─────────────────────────────────────────────
+%% RELATIONSHIPS
+%% ─────────────────────────────────────────────
 
-    %% ── Has: Country → User (1:M) ────────────────
-    %% "One country has many users"
+%% ── Has: Country → User (1:M) ────────────────
+%% "One country has many users"
     COUNTRY ||--o{ USER : "Has"
 
-    %% ── Is a: User → Jury (Joined Table Inheritance)
-    %% "A Jury IS A User"
+%% ── Is a: User → Jury (Joined Table Inheritance)
+%% "A Jury IS A User"
     USER ||--|| JURY    : "Is a"
     USER ||--|| CITIZEN : "Is a"
     USER ||--|| ADMIN   : "Is a"
 
-    %% ── Country → Song (1:M) ─────────────────────
-    %% "One country submits many songs"
+%% ── Country → Song (1:M) ─────────────────────
+%% "One country submits many songs"
     COUNTRY ||--o{ SONG : "submits"
 
-    %% ── Votes: Jury → VoteLog (1:M) ─────────────
-    %% "One jury member casts many votes"
+%% ── Votes: Jury → VoteLog (1:M) ─────────────
+%% "One jury member casts many votes"
     JURY    ||--o{ VOTE_LOG : "Votes (jury)"
 
-    %% ── Votes: Citizen → VoteLog (1:M) ──────────
-    %% "One citizen casts many votes"
+%% ── Votes: Citizen → VoteLog (1:M) ──────────
+%% "One citizen casts many votes"
     CITIZEN ||--o{ VOTE_LOG : "Votes (public)"
 
-    %% ── VoteLog → Song (M:1) ─────────────────────
-    %% "Many votes target one song"
+%% ── VoteLog → Song (M:1) ─────────────────────
+%% "Many votes target one song"
     VOTE_LOG }o--|| SONG : "votes for"
 
-    %% ── Calculate: Song → Score (1:1) ────────────
-    %% "One song has one calculated score"
-    SONG    ||--|| SCORE : "Calculate"
+%% ── VoteLog → Show (M:1) ─────────────────────
+%% "Many votes belong to one show"
+    VOTE_LOG }o--|| SHOW : "cast in"
 
-    %% ── Song ↔ Show (M:N via SHOW_SONG) ──────────
-    %% "Songs appear in shows"
+%% ── Calculate: Song/Show → Score (M:1 each, UNIQUE together) ─
+%% "One score per song per show — independent per show"
+    SONG    ||--o{ SCORE : "Calculate"
+    SHOW    ||--o{ SCORE : "Calculate"
+
+%% ── Song ↔ Show (M:N via SHOW_SONG) ──────────
+%% "Songs appear in shows"
     SHOW     ||--o{ SHOW_SONG  : "contains"
     SONG     ||--o{ SHOW_SONG  : "appears in"
 
-    %% ── Manage: Admin ↔ Show (M:N via ADMIN_SHOW) 
-    %% "Admins manage shows"
+%% ── Manage: Admin ↔ Show (M:N via ADMIN_SHOW)
+%% "Admins manage shows"
     ADMIN    ||--o{ ADMIN_SHOW : "Manage"
     SHOW     ||--o{ ADMIN_SHOW : "managed by"

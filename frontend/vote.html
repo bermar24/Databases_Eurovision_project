@@ -6,46 +6,90 @@
   <title>Eurovision 2025 — Vote</title>
   <link rel="stylesheet" href="style.css">
   <style>
-    .points-grid {
+    /* ── Ballot grid ──────────────────────────────────────────────── */
+    .ballot-grid {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
-      gap: 8px;
-      margin-top: 8px;
+      grid-template-columns: 80px 1fr;
+      gap: 10px;
+      align-items: center;
     }
-    .points-btn {
-      padding: 12px 4px;
-      border: 2px solid #2a2a6e;
-      border-radius: 8px;
-      background: #0a0a2e;
-      color: #aaa;
-      font-size: 1.1rem;
-      font-weight: 700;
-      cursor: pointer;
+    .point-label {
       text-align: center;
-      transition: all 0.15s;
-    }
-    .points-btn:hover  { border-color: #f5c400; color: #f5c400; }
-    .points-btn.selected {
-      background: #f5c400;
-      border-color: #f5c400;
+      font-size: 1.3rem;
+      font-weight: 900;
       color: #0a0a2e;
+      background: #f5c400;
+      border-radius: 8px;
+      padding: 10px 4px;
+      line-height: 1;
     }
-    .points-btn.douze { font-size: 1.3rem; }
-    .points-rule {
-      font-size: 0.78rem;
-      color: #666;
-      margin-top: 8px;
-      line-height: 1.5;
+    .point-label.douze { font-size: 1.5rem; }
+    .point-label.assigned { background: #2ecc71; }
+
+    .ballot-select {
+      width: 100%;
+      padding: 10px 14px;
+      background: #0a0a2e;
+      border: 1px solid #2a2a6e;
+      border-radius: 6px;
+      color: #f0f0f0;
+      font-size: 0.95rem;
+      transition: border-color 0.2s;
     }
+    .ballot-select:focus { outline: none; border-color: #f5c400; }
+    .ballot-select.assigned { border-color: #2ecc71; }
+    .ballot-select option { background: #0a0a2e; }
+
+    /* ── Progress bar ─────────────────────────────────────────────── */
+    .progress-bar {
+      background: #0a0a2e;
+      border-radius: 20px;
+      height: 8px;
+      margin: 12px 0 4px;
+      overflow: hidden;
+    }
+    .progress-fill {
+      height: 100%;
+      background: #f5c400;
+      border-radius: 20px;
+      transition: width 0.3s;
+      width: 0%;
+    }
+    .progress-label {
+      font-size: 0.8rem;
+      color: #aaa;
+      text-align: right;
+      margin-bottom: 16px;
+    }
+
+    /* ── Voter badge ──────────────────────────────────────────────── */
     .voter-badge {
       display: inline-block;
       background: #1a1a6e;
       border: 1px solid #2a2a6e;
       border-radius: 20px;
-      padding: 4px 14px;
-      font-size: 0.8rem;
+      padding: 5px 14px;
+      font-size: 0.82rem;
       color: #aac4ff;
-      margin-bottom: 16px;
+      margin-bottom: 18px;
+    }
+
+    /* ── Result breakdown ─────────────────────────────────────────── */
+    .ballot-summary {
+      font-size: 0.85rem;
+    }
+    .ballot-summary .entry {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 0;
+      border-bottom: 1px solid #1a1a4e;
+    }
+    .ballot-summary .entry:last-child { border-bottom: none; }
+    .ballot-summary .pts {
+      font-weight: 900;
+      color: #f5c400;
+      min-width: 40px;
+      text-align: right;
     }
   </style>
 </head>
@@ -71,9 +115,11 @@
     <div class="step" id="s2">2</div>
     <div class="step-line"></div>
     <div class="step" id="s3">3</div>
+    <div class="step-line"></div>
+    <div class="step" id="s4">4</div>
   </div>
 
-  <!-- ── STEP 1: Voter identity ──────────────────────────────────── -->
+  <!-- ── STEP 1: Identity ─────────────────────────────────────────── -->
   <div id="step1" class="card">
     <h2 id="step1Title">Who are you?</h2>
     <div id="msgStep1" class="msg"></div>
@@ -86,22 +132,25 @@
           <option value="">Loading jury members...</option>
         </select>
       </div>
-      <div id="juryInfo" style="font-size:0.85rem;color:#aaa;margin-bottom:16px;min-height:20px;"></div>
+      <div id="juryInfo" style="font-size:0.85rem;color:#aaa;margin-bottom:16px;min-height:18px;"></div>
     </div>
 
     <!-- CITIZEN panel -->
     <div id="citizenPanel" style="display:none">
       <div class="form-group">
-        <label>Your Name</label>
-        <input type="text" id="citizenName" placeholder="e.g. Anna Müller">
+        <label>Phone Number</label>
+        <input type="tel" id="citizenPhone" placeholder="e.g. +49 170 1234567">
+        <p style="font-size:0.78rem;color:#666;margin-top:5px;">
+          Your phone number is your unique voter ID. If you've voted before, your account will be found automatically.
+        </p>
       </div>
-      <div class="form-group">
-        <label>Your Country</label>
+      <div class="form-group" id="citizenCountryGroup">
+        <label>Your Country <span style="color:#666">(only needed for new registration)</span></label>
         <select id="citizenCountry">
           <option value="">Loading countries...</option>
         </select>
       </div>
-      <div id="citizenRegistered" style="display:none">
+      <div id="citizenConfirmBox" style="display:none">
         <div class="msg msg-success show" id="citizenConfirm"></div>
       </div>
     </div>
@@ -109,141 +158,147 @@
     <button class="btn btn-primary" id="btnStep1">Continue →</button>
   </div>
 
-  <!-- ── STEP 2: Show + Song + Points ───────────────────────────── -->
+  <!-- ── STEP 2: Select Show ──────────────────────────────────────── -->
   <div id="step2" class="card" style="display:none">
-    <h2>Select Show, Song &amp; Points</h2>
+    <h2>Select Show</h2>
     <div id="voterBadge" class="voter-badge"></div>
     <div id="msgStep2" class="msg"></div>
 
     <div class="form-group">
       <label>Show</label>
       <select id="showSelect">
-        <option value="">Loading shows...</option>
+        <option value="">— select an eligible show —</option>
       </select>
     </div>
+    <p style="font-size:0.82rem;color:#666;margin-top:-8px;margin-bottom:16px;">
+      Only shows you are eligible to vote in are selectable.<br>
+      Greyed-out shows are not available for your country or voter type.
+    </p>
 
-    <div class="form-group">
-      <label>Song to vote for</label>
-      <select id="songSelect">
-        <option value="">Select a show first...</option>
-      </select>
-    </div>
-
-    <div class="form-group">
-      <label>Points to award</label>
-      <div class="points-grid" id="pointsGrid">
-        <!-- filled by JS -->
-      </div>
-      <p class="points-rule">
-        Eurovision scale — award exactly one value per vote.<br>
-        You cannot vote for your own country's song.
-      </p>
-    </div>
-
-    <button class="btn btn-primary" id="btnStep2">Cast Vote →</button>
+    <button class="btn btn-primary" id="btnStep2">Build Ballot →</button>
   </div>
 
-  <!-- ── STEP 3: Result ──────────────────────────────────────────── -->
+  <!-- ── STEP 3: Ballot ───────────────────────────────────────────── -->
   <div id="step3" class="card" style="display:none">
-    <h2>Vote Cast! 🎉</h2>
-    <div class="msg msg-success show" id="voteResult"></div>
+    <h2>Your Ballot</h2>
+    <div id="voterBadge3" class="voter-badge"></div>
+    <div id="showBadge3" style="font-size:0.82rem;color:#aaa;margin-bottom:16px;"></div>
+    <div id="msgStep3" class="msg"></div>
 
-    <div style="margin:20px 0;padding:20px;background:#0a0a2e;border-radius:8px;text-align:center;">
-      <div style="font-size:0.75rem;letter-spacing:2px;color:#aaa;text-transform:uppercase;margin-bottom:8px;">
-        Updated Score for this song
+    <p style="font-size:0.85rem;color:#aaa;margin-bottom:14px;">
+      Assign each point value to a different song. You cannot vote for your own country.
+      All 10 values must be assigned before submitting.
+    </p>
+
+    <!-- Progress -->
+    <div class="progress-bar"><div class="progress-fill" id="progressFill"></div></div>
+    <div class="progress-label" id="progressLabel">0 / 10 assigned</div>
+
+    <!-- Ballot rows — filled by JS -->
+    <div class="ballot-grid" id="ballotGrid"></div>
+
+    <hr class="divider" style="margin-top:20px">
+    <button class="btn btn-primary btn-block" id="btnStep3" disabled>
+      Submit Ballot →
+    </button>
+  </div>
+
+  <!-- ── STEP 4: Confirmation ─────────────────────────────────────── -->
+  <div id="step4" class="card" style="display:none">
+    <h2>Ballot Submitted! 🎉</h2>
+    <div class="msg msg-success show" id="ballotConfirm"></div>
+
+    <div style="margin:20px 0;">
+      <div style="font-size:0.75rem;letter-spacing:2px;color:#aaa;text-transform:uppercase;margin-bottom:10px;">
+        Your votes
       </div>
-      <div id="scoreValue" style="font-size:3.5rem;font-weight:900;color:#f5c400;line-height:1;"></div>
-      <div style="font-size:0.75rem;color:#666;margin-top:4px;">points</div>
-      <div id="scoreSong"  style="font-size:0.9rem;color:#aaa;margin-top:8px;"></div>
+      <div class="ballot-summary" id="ballotSummary"></div>
     </div>
 
     <a href="vote.html" class="btn btn-secondary btn-block">Vote Again</a>
     <a href="scores.html" class="btn btn-primary btn-block" style="margin-top:10px;">
-      View Full Leaderboard →
+      View Leaderboard →
     </a>
   </div>
 
 </main>
 
 <script>
-  const API = 'http://localhost:8080/api';
-
-  // ── URL param: ?type=jury or ?type=citizen ──────────────────────────
+  const API      = 'http://localhost:8080/api';
+  const POINTS   = [12, 10, 8, 7, 6, 5, 4, 3, 2, 1];
   const voteType = new URLSearchParams(window.location.search).get('type') || 'jury';
 
-  // State
-  let voterId         = null;
-  let voterCountry    = null;   // to enforce no-own-country rule in UI
-  let selectedPoints  = null;
-  let citizenRegistered = false;
+  // ── State ──────────────────────────────────────────────────────────
+  let voterId      = null;
+  let voterCountry = null;
+  let selectedShow = null;   // { showId, showName, songIds }
+  let allSongs     = [];     // full song list from API
+  let showSongs    = [];     // songs filtered to selected show
 
-  const POINTS = [12, 10, 8, 7, 6, 5, 4, 3, 2, 1];
+  // ballot[i] = selected songId for POINTS[i], or null
+  const ballot = new Array(10).fill(null);
 
-  // ── Build points grid ───────────────────────────────────────────────
-  function buildPointsGrid() {
-    const grid = document.getElementById('pointsGrid');
-    grid.innerHTML = '';
-    POINTS.forEach(p => {
-      const btn = document.createElement('button');
-      btn.className = 'points-btn' + (p === 12 ? ' douze' : '');
-      btn.textContent = p === 12 ? '12 ★' : p;
-      btn.dataset.points = p;
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.points-btn').forEach(b => b.classList.remove('selected'));
-        btn.classList.add('selected');
-        selectedPoints = p;
-        hideMsg(document.getElementById('msgStep2'));
-      });
-      grid.appendChild(btn);
+  // ── Helpers ────────────────────────────────────────────────────────
+  async function apiFetch(path) {
+    const r = await fetch(API + path);
+    if (!r.ok) throw new Error(`HTTP ${r.status} on ${path}`);
+    return r.json();
+  }
+
+  async function apiPost(path, body) {
+    const r = await fetch(API + path, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(body)
     });
+    const txt = await r.text();
+    if (!r.ok) throw new Error(txt || `HTTP ${r.status}`);
+    return txt ? JSON.parse(txt) : {};
   }
 
-  // ── Init ────────────────────────────────────────────────────────────
-  function init() {
-    buildPointsGrid();
-    if (voteType === 'jury') {
-      document.getElementById('step1Title').textContent = '🎼 Select Jury Member';
-      document.getElementById('citizenPanel').style.display = 'none';
-      document.getElementById('juryPanel').style.display    = 'block';
-      loadJury();
-    } else {
-      document.getElementById('step1Title').textContent = '🗳️ Register as Citizen';
-      document.getElementById('juryPanel').style.display    = 'none';
-      document.getElementById('citizenPanel').style.display = 'block';
-      loadCountries();
-    }
-    loadShows();
+  function showMsg(el, type, text) {
+    el.className = `msg msg-${type} show`;
+    el.textContent = text;
+  }
+  function hideMsg(el) { el.className = 'msg'; el.textContent = ''; }
+
+  function goToStep(n) {
+    [1,2,3,4].forEach(i => {
+      document.getElementById(`step${i}`).style.display = 'none';
+      const dot = document.getElementById(`s${i}`);
+      dot.className = i < n ? 'step done' : i === n ? 'step active' : 'step';
+    });
+    document.getElementById(`step${n}`).style.display = 'block';
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-  // ── Loaders ─────────────────────────────────────────────────────────
+  // ── Load data ──────────────────────────────────────────────────────
   async function loadJury() {
     const sel = document.getElementById('jurySelect');
     try {
       const data = await apiFetch('/jury');
-      sel.innerHTML = '<option value="">— pick a jury member —</option>';
+      sel.innerHTML = '<option value="">— select a jury member —</option>';
       data.forEach(j => {
         const opt = document.createElement('option');
         opt.value = j.userId;
-        opt.textContent = `Jury #${j.userId} — ${j.countryCode}  (${j.professionalBg || 'n/a'})`;
         opt.dataset.country = j.countryCode;
         opt.dataset.bg = j.professionalBg || '';
+        opt.textContent = `Jury #${j.userId} — ${j.countryCode} (${j.professionalBg || 'n/a'})`;
         sel.appendChild(opt);
       });
       sel.addEventListener('change', () => {
         const opt = sel.selectedOptions[0];
         if (opt && opt.value) {
           document.getElementById('juryInfo').textContent =
-            `Country: ${opt.dataset.country}  ·  Background: ${opt.dataset.bg}`;
+                  `Country: ${opt.dataset.country}  ·  Background: ${opt.dataset.bg}`;
           voterCountry = opt.dataset.country;
         } else {
           document.getElementById('juryInfo').textContent = '';
           voterCountry = null;
         }
-        // Grey out songs from same country
-        filterOwnCountrySongs();
       });
     } catch(e) {
-      sel.innerHTML = '<option>Error loading jury — is the API running?</option>';
+      sel.innerHTML = '<option>Error loading jury</option>';
     }
   }
 
@@ -258,10 +313,6 @@
         opt.textContent = `${c.countryName} (${c.countryCode})`;
         sel.appendChild(opt);
       });
-      sel.addEventListener('change', () => {
-        voterCountry = sel.value || null;
-        filterOwnCountrySongs();
-      });
     } catch(e) {
       sel.innerHTML = '<option>Error loading countries</option>';
     }
@@ -270,204 +321,335 @@
   async function loadShows() {
     const sel = document.getElementById('showSelect');
     try {
-      const data = await apiFetch('/shows');
+      const shows   = await apiFetch('/shows');
+      const songs   = await apiFetch('/songs');
+
+      // Build countryCode → songId map so we can check show eligibility
+      const countrySongMap = {};
+      songs.forEach(s => { countrySongMap[s.countryCode] = s.songId; });
+
       sel.innerHTML = '<option value="">— select a show —</option>';
-      data.forEach(s => {
+
+      shows.forEach(s => {
+        const name    = (s.showName || '').trim();
+        const songIds = s.songIds || [];
+        const isGF    = name.toLowerCase() === 'grand final';
+        const isSF    = name.toLowerCase().startsWith('semi');
+
+        // ── Eligibility check ──────────────────────────────────────
+        let eligible = true;
+        let reason   = '';
+
+        if (voteType === 'jury') {
+          // Jury only votes in the Grand Final
+          if (!isGF) {
+            eligible = false;
+            reason = 'Jury votes in Grand Final only';
+          }
+        } else {
+          // Citizen: eligible for Grand Final always
+          // For semi-finals: voter's country must have a song in that show
+          if (isSF && voterCountry) {
+            const voterSongId = countrySongMap[voterCountry];
+            const countryInShow = voterSongId && songIds.includes(voterSongId);
+            if (!countryInShow) {
+              eligible = false;
+              reason = `${voterCountry} is not in ${name}`;
+            }
+          }
+        }
+
         const opt = document.createElement('option');
         opt.value = s.showId;
-        opt.textContent = s.showName || `Show #${s.showId}`;
-        opt.dataset.songIds = JSON.stringify(s.songIds || []);
+        opt.dataset.songIds  = JSON.stringify(songIds);
+        opt.dataset.showName = name;
+
+        if (eligible) {
+          opt.textContent = name || `Show #${s.showId}`;
+        } else {
+          opt.textContent = `${name} — ${reason}`;
+          opt.disabled    = true;
+          opt.style.color = '#444';
+        }
+
         sel.appendChild(opt);
       });
+
+      // Count available (non-disabled) options
+      const available = Array.from(sel.options).filter(o => !o.disabled && o.value);
+      if (available.length === 1) {
+        // Auto-select if only one show is eligible
+        available[0].selected = true;
+      }
+
     } catch(e) {
       sel.innerHTML = '<option>Error loading shows</option>';
     }
   }
 
-  async function loadSongsForShow(showId, songIds) {
-    const sel = document.getElementById('songSelect');
-    sel.innerHTML = '<option>Loading songs...</option>';
-    try {
-      const allSongs = await apiFetch('/songs');
-      // Filter to songs in this show if songIds is available
-      const inShow = (songIds && songIds.length > 0)
-        ? allSongs.filter(s => songIds.includes(s.songId))
-        : allSongs;
-
-      sel.innerHTML = '<option value="">— select a song —</option>';
-      inShow.forEach(s => {
-        const opt = document.createElement('option');
-        opt.value = s.songId;
-        opt.textContent = `${s.singerName} (${s.countryCode})`;
-        opt.dataset.country = s.countryCode;
-        sel.appendChild(opt);
-      });
-      filterOwnCountrySongs();
-    } catch(e) {
-      sel.innerHTML = '<option>Error loading songs</option>';
-    }
+  async function loadAllSongs() {
+    allSongs = await apiFetch('/songs');
   }
 
-  // Disable/mark songs from voter's own country
-  function filterOwnCountrySongs() {
-    const sel = document.getElementById('songSelect');
-    Array.from(sel.options).forEach(opt => {
-      if (opt.dataset.country && voterCountry &&
-          opt.dataset.country === voterCountry) {
-        opt.disabled = true;
-        opt.textContent = opt.textContent.replace(' ★ own country', '') + ' ★ own country';
-      } else if (opt.dataset.country) {
-        opt.disabled = false;
-        opt.textContent = opt.textContent.replace(' ★ own country', '');
-      }
+  // ── Build ballot grid ──────────────────────────────────────────────
+  function buildBallotGrid() {
+    const grid = document.getElementById('ballotGrid');
+    grid.innerHTML = '';
+
+    // Filter songs for this show, exclude voter's own country
+    showSongs = allSongs.filter(s => {
+      const inShow = selectedShow.songIds.length === 0 ||
+              selectedShow.songIds.includes(s.songId);
+      return inShow;
+    });
+
+    POINTS.forEach((pts, idx) => {
+      // Point label
+      const label = document.createElement('div');
+      label.className = `point-label${pts === 12 ? ' douze' : ''}`;
+      label.id = `lbl-${idx}`;
+      label.textContent = pts === 12 ? '12 ★' : pts;
+      grid.appendChild(label);
+
+      // Song selector
+      const sel = document.createElement('select');
+      sel.className = 'ballot-select';
+      sel.id = `sel-${idx}`;
+
+      sel.innerHTML = '<option value="">— select a song —</option>';
+      showSongs.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.songId;
+        opt.dataset.country = s.countryCode;
+        const isOwn = s.countryCode === voterCountry;
+        opt.textContent = `${s.singerName} (${s.countryCode})${isOwn ? ' ★ own — cannot vote' : ''}`;
+        opt.disabled = isOwn;
+        sel.appendChild(opt);
+      });
+
+      sel.addEventListener('change', () => onBallotChange(idx, sel));
+      grid.appendChild(sel);
     });
   }
 
-  // ── Show dropdown → load songs ─────────────────────────────────────
-  document.getElementById('showSelect').addEventListener('change', function() {
-    if (this.value) {
-      const opt = this.selectedOptions[0];
-      let songIds = [];
-      try { songIds = JSON.parse(opt.dataset.songIds || '[]'); } catch(e) {}
-      loadSongsForShow(this.value, songIds);
-    } else {
-      document.getElementById('songSelect').innerHTML =
-        '<option value="">Select a show first...</option>';
-    }
-  });
+  function onBallotChange(idx, sel) {
+    const songId = sel.value ? parseInt(sel.value) : null;
 
-  // ── Step 1 button ──────────────────────────────────────────────────
+    // Check: same song selected in another row?
+    if (songId !== null) {
+      for (let i = 0; i < 10; i++) {
+        if (i !== idx && ballot[i] === songId) {
+          showMsg(document.getElementById('msgStep3'), 'error',
+                  'Each song can only receive one point value. Please select a different song.');
+          sel.value = '';
+          ballot[idx] = null;
+          updateProgress();
+          return;
+        }
+      }
+    }
+
+    hideMsg(document.getElementById('msgStep3'));
+    ballot[idx] = songId;
+
+    // Visual feedback
+    const label = document.getElementById(`lbl-${idx}`);
+    if (songId) {
+      sel.classList.add('assigned');
+      label.classList.add('assigned');
+    } else {
+      sel.classList.remove('assigned');
+      label.classList.remove('assigned');
+    }
+
+    updateProgress();
+  }
+
+  function updateProgress() {
+    const assigned = ballot.filter(v => v !== null).length;
+    const pct = (assigned / 10) * 100;
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressLabel').textContent = `${assigned} / 10 assigned`;
+    document.getElementById('btnStep3').disabled = assigned < 10;
+  }
+
+  // ── Step 1: Voter identity ─────────────────────────────────────────
   document.getElementById('btnStep1').addEventListener('click', async () => {
     const msg = document.getElementById('msgStep1');
 
     if (voteType === 'jury') {
       const sel = document.getElementById('jurySelect');
       if (!sel.value) { showMsg(msg, 'error', 'Please select a jury member.'); return; }
-      voterId      = parseInt(sel.value);
+      voterId = parseInt(sel.value);
       voterCountry = sel.selectedOptions[0].dataset.country;
       document.getElementById('voterBadge').textContent =
-        `🎼 Jury #${voterId} — ${voterCountry}`;
+              `🎼 Jury #${voterId} — ${voterCountry}`;
+      showMsg(msg, 'info', 'Loading eligible shows...');
+      await loadShows();
+      hideMsg(msg);
       goToStep(2);
 
     } else {
-      if (!citizenRegistered) {
-        const name    = document.getElementById('citizenName').value.trim();
-        const country = document.getElementById('citizenCountry').value;
-        if (!name)    { showMsg(msg, 'error', 'Please enter your name.'); return; }
-        if (!country) { showMsg(msg, 'error', 'Please select your country.'); return; }
+      // Citizen — look up or register by phone
+      const phone   = document.getElementById('citizenPhone').value.trim();
+      const country = document.getElementById('citizenCountry').value;
 
-        showMsg(msg, 'info', 'Registering...');
+      if (!phone) { showMsg(msg, 'error', 'Please enter your phone number.'); return; }
+
+      showMsg(msg, 'info', 'Looking up your account...');
+      try {
+        // Try to find existing citizen by phone
+        let citizen = null;
         try {
-          const result = await apiPost('/citizens', { countryCode: country });
-          voterId = result.userId;
-          voterCountry = country;
-          citizenRegistered = true;
-          document.getElementById('citizenRegistered').style.display = 'block';
+          citizen = await apiFetch(`/citizens/by-phone/${encodeURIComponent(phone)}`);
           document.getElementById('citizenConfirm').textContent =
-            `✓ Registered: ${name} from ${country} — Citizen ID: ${voterId}`;
-          document.getElementById('citizenName').disabled    = true;
-          document.getElementById('citizenCountry').disabled = true;
-          hideMsg(msg);
-          document.getElementById('voterBadge').textContent =
-            `🗳️ Citizen #${voterId} — ${country}`;
-          goToStep(2);
+                  `✓ Welcome back! Account found — ${citizen.countryCode} (ID: ${citizen.userId})`;
         } catch(e) {
-          showMsg(msg, 'error', 'Registration failed: ' + e.message);
+          // Not found — register new
+          if (!country) {
+            hideMsg(msg);
+            showMsg(msg, 'error',
+                    'Phone number not found. Please select your country to register.');
+            return;
+          }
+          citizen = await apiPost('/citizens', { countryCode: country, phoneNumber: phone });
+          document.getElementById('citizenConfirm').textContent =
+                  `✓ Registered! ${citizen.countryCode} — Citizen ID: ${citizen.userId}`;
         }
-      } else {
+
+        voterId = citizen.userId;
+        voterCountry = citizen.countryCode;
+        document.getElementById('citizenConfirmBox').style.display = 'block';
+        document.getElementById('citizenPhone').disabled    = true;
+        document.getElementById('citizenCountry').disabled  = true;
+        document.getElementById('voterBadge').textContent =
+                `🗳️ Citizen #${voterId} — ${voterCountry}`;
+        showMsg(msg, 'info', 'Loading eligible shows...');
+        await loadShows();
+        hideMsg(msg);
         goToStep(2);
+
+      } catch(e) {
+        showMsg(msg, 'error', 'Error: ' + e.message);
       }
     }
   });
 
-  // ── Step 2 button — cast vote ──────────────────────────────────────
+  // ── Step 2: Select show ────────────────────────────────────────────
   document.getElementById('btnStep2').addEventListener('click', async () => {
-    const msg    = document.getElementById('msgStep2');
-    const showId = document.getElementById('showSelect').value;
-    const songSel = document.getElementById('songSelect');
-    const songId = songSel.value;
+    const msg = document.getElementById('msgStep2');
+    const sel = document.getElementById('showSelect');
+    if (!sel.value) { showMsg(msg, 'error', 'Please select a show.'); return; }
 
-    if (!showId)       { showMsg(msg, 'error', 'Please select a show.'); return; }
-    if (!songId)       { showMsg(msg, 'error', 'Please select a song.'); return; }
-    if (!selectedPoints){ showMsg(msg, 'error', 'Please select the points to award.'); return; }
+    const opt = sel.selectedOptions[0];
+    let songIds = [];
+    try { songIds = JSON.parse(opt.dataset.songIds || '[]'); } catch(e) {}
 
-    // Client-side own-country check (also enforced server-side)
-    const songCountry = songSel.selectedOptions[0]?.dataset.country;
-    if (songCountry && voterCountry && songCountry === voterCountry) {
-      showMsg(msg, 'error',
-        `You cannot vote for your own country (${voterCountry}). Please select a different song.`);
+    selectedShow = {
+      showId:   parseInt(sel.value),
+      showName: opt.dataset.showName || opt.textContent,
+      songIds:  songIds
+    };
+
+    showMsg(msg, 'info', 'Loading songs...');
+    try {
+      await loadAllSongs();
+      hideMsg(msg);
+    } catch(e) {
+      showMsg(msg, 'error', 'Failed to load songs: ' + e.message);
       return;
     }
 
-    showMsg(msg, 'info', 'Casting vote...');
+    // Reset ballot state
+    ballot.fill(null);
+
+    // Set badges for step 3
+    document.getElementById('voterBadge3').textContent =
+            document.getElementById('voterBadge').textContent;
+    document.getElementById('showBadge3').textContent =
+            `📺 ${selectedShow.showName}`;
+
+    buildBallotGrid();
+    updateProgress();
+    goToStep(3);
+  });
+
+  // ── Step 3: Submit ballot ──────────────────────────────────────────
+  document.getElementById('btnStep3').addEventListener('click', async () => {
+    const msg = document.getElementById('msgStep3');
+
+    // Double-check all 10 assigned
+    if (ballot.some(v => v === null)) {
+      showMsg(msg, 'error', 'Please assign all 10 point values before submitting.');
+      return;
+    }
+
+    // Build payload
+    const votes = POINTS.map((pts, idx) => ({
+      songId: ballot[idx],
+      points: pts
+    }));
+
+    const payload = { showId: selectedShow.showId, votes };
+    if (voteType === 'jury') payload.juryId    = voterId;
+    else                     payload.citizenId = voterId;
+
+    showMsg(msg, 'info', 'Submitting ballot...');
+    document.getElementById('btnStep3').disabled = true;
 
     try {
-      const payload = {
-        songId: parseInt(songId),
-        points: selectedPoints
-      };
-      if (voteType === 'jury') payload.juryId    = voterId;
-      else                     payload.citizenId = voterId;
+      const result = await apiPost('/votes/session', payload);
 
-      await apiPost('/votes', payload);
+      // Trigger full show score recalculation (jury + citizen aggregation)
+      try {
+        await apiPost(`/scores/calculate-show/${selectedShow.showId}`, {});
+      } catch(e) { /* non-fatal — scores can be refreshed from the scores page */ }
 
-      // Recalculate score immediately after voting
-      const score = await apiPost(`/scores/calculate/${songId}`, {});
+      // Build confirmation summary
+      const songMap = {};
+      allSongs.forEach(s => { songMap[s.songId] = s; });
 
-      const songName = songSel.selectedOptions[0].textContent;
-      document.getElementById('voteResult').textContent =
-        `✓ ${selectedPoints} point${selectedPoints > 1 ? 's' : ''} awarded to "${songName}"`;
-      document.getElementById('scoreValue').textContent = score.songScore;
-      document.getElementById('scoreSong').textContent  = songName;
+      const summaryEl = document.getElementById('ballotSummary');
+      summaryEl.innerHTML = '';
+      result.entries
+              .sort((a, b) => b.points - a.points)
+              .forEach(entry => {
+                const song = songMap[entry.songId] || {};
+                const row  = document.createElement('div');
+                row.className = 'entry';
+                row.innerHTML = `
+            <span>${song.singerName || '?'} <span style="color:#666">(${song.countryCode || '?'})</span></span>
+            <span class="pts">${entry.points} pts</span>`;
+                summaryEl.appendChild(row);
+              });
 
-      goToStep(3);
+      document.getElementById('ballotConfirm').textContent =
+              `✓ Ballot submitted for ${selectedShow.showName}. Session: ${result.voteSessionId.slice(0,8)}...`;
+
+      goToStep(4);
+
     } catch(e) {
-      showMsg(msg, 'error', 'Vote failed: ' + e.message);
+      showMsg(msg, 'error', e.message);
+      document.getElementById('btnStep3').disabled = false;
     }
   });
 
-  // ── Helpers ────────────────────────────────────────────────────────
-  async function apiFetch(path) {
-    const r = await fetch(API + path);
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
-  }
-
-  async function apiPost(path, body) {
-    const r = await fetch(API + path, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    });
-    if (!r.ok) {
-      const txt = await r.text();
-      throw new Error(txt || `HTTP ${r.status}`);
+  // ── Init ───────────────────────────────────────────────────────────
+  function init() {
+    if (voteType === 'jury') {
+      document.getElementById('step1Title').textContent = '🎼 Select Jury Member';
+      document.getElementById('citizenPanel').style.display = 'none';
+      document.getElementById('juryPanel').style.display    = 'block';
+      loadJury();
+    } else {
+      document.getElementById('step1Title').textContent = '🗳️ Identify as Citizen';
+      document.getElementById('juryPanel').style.display    = 'none';
+      document.getElementById('citizenPanel').style.display = 'block';
+      loadCountries();
     }
-    const txt = await r.text();
-    return txt ? JSON.parse(txt) : {};
-  }
-
-  function showMsg(el, type, text) {
-    el.className = `msg msg-${type} show`;
-    el.textContent = text;
-  }
-  function hideMsg(el) {
-    el.className = 'msg';
-    el.textContent = '';
-  }
-
-  function goToStep(n) {
-    [1,2,3].forEach(i => {
-      document.getElementById(`step${i}`).style.display = 'none';
-      const dot = document.getElementById(`s${i}`);
-      dot.className = i < n ? 'step done' : i === n ? 'step active' : 'step';
-    });
-    document.getElementById(`step${n}`).style.display = 'block';
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
   init();
 </script>
-
 </body>
 </html>

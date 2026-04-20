@@ -5,18 +5,28 @@ import com.dhbw.eurovision.entity.Score;
 import org.springframework.stereotype.Component;
 
 /**
- * Factory for Score — converts Entity -> ResponseDTO.
- * Score has no RequestDTO because it is always calculated, never directly created.
+ * Factory for Score.
+ * Score has no RequestDTO — it is always calculated, never directly created.
  */
 @Component
 public class ScoreFactory {
 
-    /** Convert a persisted Score entity to a response DTO. */
     public ScoreResponseDTO toResponseDTO(Score score) {
+        Long   songId      = score.getSong()  != null ? score.getSong().getSongId()          : null;
+        Long   showId      = score.getShow()  != null ? score.getShow().getShowId()          : null;
+        String showName    = score.getShow()  != null ? score.getShow().getShowName()        : null;
+        String singerName  = score.getSong()  != null ? score.getSong().getSingerName()      : null;
+        String countryCode = (score.getSong() != null && score.getSong().getCountry() != null)
+                ? score.getSong().getCountry().getCountryCode() : null;
+
         return new ScoreResponseDTO(
                 score.getScoreId(),
                 score.getSongScore(),
-                score.getSong() != null ? score.getSong().getSongId() : null
+                songId,
+                showId,
+                showName,
+                singerName,
+                countryCode
         );
     }
 }

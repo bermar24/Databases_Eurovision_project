@@ -62,11 +62,11 @@ if errorlevel 1 (
     set PYTHON=python
 )
 
-:: Check Docker Desktop is actually running (not just installed)
+:: Check Docker is actually running (not just installed)
 docker info >nul 2>&1
 if errorlevel 1 (
     echo [ERROR] Docker is installed but not running.
-    echo         Please start Docker Desktop and wait for it to fully load, then try again.
+    echo         Please start Docker and wait for it to fully load, then try again.
     exit /b 1
 )
 

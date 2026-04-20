@@ -16,7 +16,7 @@ public class CitizenFactory {
     public Citizen toEntity(CitizenRequestDTO dto, Country country) {
         Citizen citizen = new Citizen();
         citizen.setCountry(country);
-        // TODO: set username, email, phone once entity fields are added
+        citizen.setPhoneNumber(dto.getPhoneNumber());
         return citizen;
     }
 
@@ -24,7 +24,8 @@ public class CitizenFactory {
     public CitizenResponseDTO toResponseDTO(Citizen citizen) {
         return new CitizenResponseDTO(
                 citizen.getUserId(),
-                citizen.getCountry() != null ? citizen.getCountry().getCountryCode() : null
+                citizen.getCountry() != null ? citizen.getCountry().getCountryCode() : null,
+                citizen.getPhoneNumber()
         );
     }
 }

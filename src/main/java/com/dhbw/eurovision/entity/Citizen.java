@@ -9,13 +9,11 @@ import java.util.ArrayList;
 import java.util.List;
 
 /**
- * EERM Entity: Citizen  (subtype of User — public voter)
- * Attributes: user_id (inherited PK/FK)
+ * EERM Entity: Citizen (subtype of User — public televote voter)
  *
- * DB table: "citizen"
- *   -> citizen.user_id FK -> user.user_id
- *
- * EERM "Votes" diamond: Jury/Citizen (M) -> VoteLog -> Song
+ * phone_number is UNIQUE — one citizen account per phone number.
+ * If a phone number already exists, the existing record is reused (no duplicates).
+ * userId remains the PK (auto-generated); phone_number is a natural business key.
  */
 @Entity
 @Table(name = "citizen")
@@ -23,10 +21,9 @@ import java.util.List;
 @Getter @Setter @NoArgsConstructor
 public class Citizen extends User {
 
-    // TODO: Add citizen-specific attributes if your team defines any
-    // e.g. phone number for SMS voting verification
+    @Column(name = "phone_number", nullable = false, unique = true, length = 20)
+    private String phoneNumber;
 
-    /** Votes cast by this citizen */
     @OneToMany(mappedBy = "citizen", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<VoteLog> voteLogs = new ArrayList<>();
 }

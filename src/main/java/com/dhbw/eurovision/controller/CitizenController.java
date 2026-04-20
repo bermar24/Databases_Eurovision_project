@@ -9,10 +9,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-/**
- * REST Controller for Citizen.
- * Base path: /api/citizens
- */
 @RestController
 @RequestMapping("/api/citizens")
 public class CitizenController {
@@ -35,10 +31,26 @@ public class CitizenController {
         return ResponseEntity.ok(citizenService.getCitizenById(id));
     }
 
-    /** POST /api/citizens */
+    /**
+     * GET /api/citizens/by-phone/{phoneNumber}
+     * Look up an existing citizen by phone number.
+     */
+    @GetMapping("/by-phone/{phoneNumber}")
+    public ResponseEntity<CitizenResponseDTO> getByPhone(
+            @PathVariable String phoneNumber) {
+        return ResponseEntity.ok(citizenService.getByPhoneNumber(phoneNumber));
+    }
+
+    /**
+     * POST /api/citizens
+     * Register or retrieve a citizen by phone number.
+     * If phone already exists → returns existing record (idempotent).
+     */
     @PostMapping
-    public ResponseEntity<CitizenResponseDTO> createCitizen(@RequestBody CitizenRequestDTO dto) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(citizenService.createCitizen(dto));
+    public ResponseEntity<CitizenResponseDTO> findOrCreate(
+            @RequestBody CitizenRequestDTO dto) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(citizenService.findOrCreateByPhone(dto));
     }
 
     /** DELETE /api/citizens/{id} */

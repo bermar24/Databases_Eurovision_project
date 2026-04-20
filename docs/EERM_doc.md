@@ -107,6 +107,9 @@ A professional music expert who casts weighted jury votes. Each country's jury v
 | `userId` (inherited) | `user_id` | `BIGINT` | **PK/FK** → `user.user_id` | Joined table — same ID as User |
 | `professionalBg` | `professional_bg` | `VARCHAR(255)` | nullable | e.g. `"Music Producer"`, `"Composer"` |
 
+**Jury aggregation rule:**
+Each country has 1–5 Jury members in the database. When scores are calculated, all jury ballots from the same country are pooled — their raw points per song are summed to produce a national ranking, and then the scale 12,10,8,7,6,5,4,3,2,1 is awarded once per country to the top 10 songs. This mirrors the real Eurovision national jury model: regardless of how many jurors a country has, each country contributes exactly one set of points.
+
 **Relationships:**
 
 | Relationship | Type | Target | Notes |
@@ -126,8 +129,9 @@ A member of the public who casts a televote. Citizens vote from their home count
 | Attribute | Column | Type | Constraints | Notes |
 |---|---|---|---|---|
 | `userId` (inherited) | `user_id` | `BIGINT` | **PK/FK** → `user.user_id` | Joined table |
+| `phoneNumber` | `phone_number` | `VARCHAR(20)` | NOT NULL, UNIQUE | Voter identity — same phone = same citizen |
 
-> **TODO:** Add phone/SMS verification field when implementing public voting rules.
+> Registering with a phone number that already exists returns the existing citizen record (idempotent).
 
 **Relationships:**
 
@@ -196,12 +200,12 @@ Records a single vote cast event. Acts as the resolved M:N between (Jury or Citi
 | Attribute | Column | Type | Constraints | Notes |
 |---|---|---|---|---|
 | `voteLogId` | `vote_log_id` | `BIGINT` | **PK**, AUTO_INCREMENT | |
+| `points` | `points` | `INT` | NOT NULL | Eurovision scale: 12, 10, 8, 7, 6, 5, 4, 3, 2, 1 |
 | `song` (FK) | `song_id` | `BIGINT` | NOT NULL, FK → `song` | Song being voted for |
 | `jury` (FK) | `jury_id` | `BIGINT` | nullable, FK → `jury` | Set when jury vote |
 | `citizen` (FK) | `citizen_id` | `BIGINT` | nullable, FK → `citizen` | Set when public vote |
 
-> **Business rule:** Exactly one of `jury_id` / `citizen_id` must be set. Enforced in `VoteLogService.castVote()`.  
-> **TODO:** Add `points INT NOT NULL` once the scoring scale is defined.
+> **Business rules:** (1) Exactly one of `jury_id` / `citizen_id` must be set. (2) `points` must be one of `{12, 10, 8, 7, 6, 5, 4, 3, 2, 1}`. (3) Voter's country must differ from the song's country — enforced in `VoteLogService`.
 
 ---
 
@@ -216,8 +220,13 @@ Holds the aggregated total score for a Song. Calculated by summing all VoteLog e
 | Attribute | Column | Type | Constraints | Notes |
 |---|---|---|---|---|
 | `scoreId` | `score_id` | `BIGINT` | **PK**, AUTO_INCREMENT | |
-| `songScore` | `song_score` | `INT` | NOT NULL, default 0 | Aggregated total points |
-| `song` (FK) | `song_id` | `BIGINT` | NOT NULL, UNIQUE, FK → `song` | Owning side of 1:1 |
+| `songScore` | `song_score` | `INT` | NOT NULL, default 0 | Aggregated total points for this song in this show |
+| `song` (FK) | `song_id` | `BIGINT` | NOT NULL, FK → `song` | The song being scored |
+| `show` (FK) | `show_id` | `BIGINT` | NOT NULL, FK → `show` | The show this score belongs to |
+
+**Unique constraint:** `UNIQUE(song_id, show_id)` — one score per song per show. A song that appears in both a semi-final and the Grand Final has two independent Score rows. The relationship to Song is now **1:M** (one song, many show-scores), not 1:1.
+
+**Why this matters:** Without `show_id`, recalculating the Grand Final would overwrite the Semi-Final score, losing that data permanently.
 
 ---
 
@@ -310,11 +319,13 @@ The "Votes" diamond is resolved into the `vote_log` table. Each row is one vote 
 |---|---|
 | EERM symbol | Diamond labelled **"Calculate"** |
 | Type | Derived / aggregation relationship |
-| Cardinality | M VoteLogs → 1 Score (per Song) |
-| Implementation | `ScoreService.calculateScoreForSong()` aggregates VoteLogs → writes `score.song_score` |
-| DB | `score.song_id` UNIQUE FK → `song.song_id` |
+| Cardinality | M VoteLogs → 1 Score (per Song **per Show**) |
+| Implementation | `ScoreService.calculateShowScores()` aggregates VoteLogs → writes `score.song_score` |
+| DB | `UNIQUE(song_id, show_id)` in `score` table |
 
-The Calculate diamond is not a stored FK relationship but a business logic operation. Calling the score calculation endpoint triggers aggregation of all VoteLogs for a song into a single Score row.
+Score is anchored to both Song **and** Show. A song appearing in Semi-Final 1 and the Grand Final will have two independent Score rows — one per show. This prevents Grand Final calculation from overwriting the semi-final result.
+
+The Calculate diamond is a business logic operation: `ScoreService.calculateShowScores(showId)` aggregates all VoteLogs for the show using national aggregation (for both jury and citizen), then upserts one Score row per song in that show.
 
 ---
 
@@ -395,6 +406,9 @@ A query for a `Jury` record does: `SELECT * FROM user JOIN jury USING (user_id) 
 | 3 | `VoteLog.jury_id` and `citizen_id` both nullable | One row = one vote; voter type determined by which FK is set |
 | 4 | Score is calculated, not inserted directly | Keeps score in sync with VoteLog; prevents manual tampering |
 | 5 | TODO: Add `User.username` + `User.email` | Required for authentication — deferred until auth layer is designed |
-| 6 | TODO: Add `VoteLog.points` | Scoring scale (1–12 Eurovision style) not yet agreed by team |
+| 6 | `VoteLog.points` implemented ✅ | Scale: 12,10,8,7,6,5,4,3,2,1. One ballot = 10 rows with `vote_session_id` grouping them. |
 | 7 | TODO: Add `Show.showDate`, `showType` | Show schedule/type not yet confirmed by team |
 | 8 | TODO: Add `Song.songTitle`, `language` | Extended song metadata deferred to next sprint |
+| 9 | `Citizen.phone_number` as natural key | Phone number is the real-world voter identity. `userId` remains PK for DB integrity but phone is the business key. |
+| 10 | `VoteLog.show_id` FK | Required for show-eligibility validation and one-ballot-per-show enforcement. |
+| 11 | `Score` is per (song, show) not per song | A song competing in a semi-final and the Grand Final has different scores in each. Using only song_id as FK would cause recalculation to overwrite earlier show results. |

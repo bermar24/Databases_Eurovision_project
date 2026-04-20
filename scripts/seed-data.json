@@ -38,7 +38,9 @@
     { "countryCode": "AM", "countryName": "Armenia" },
     { "countryCode": "GE", "countryName": "Georgia" },
     { "countryCode": "AZ", "countryName": "Azerbaijan" },
-    { "countryCode": "ME", "countryName": "Montenegro" }
+    { "countryCode": "ME", "countryName": "Montenegro" },
+    { "countryCode": "RW", "countryName": "Rest of the World" }
+
   ],
 
   "shows": [
@@ -107,18 +109,49 @@
   ],
 
   "jury": [
-    { "countryCode": "DE", "professionalBg": "Music Producer" },
-    { "countryCode": "FR", "professionalBg": "Vocal Coach" },
-    { "countryCode": "IT", "professionalBg": "Composer" },
-    { "countryCode": "ES", "professionalBg": "Conductor" },
-    { "countryCode": "GB", "professionalBg": "Recording Artist" }
+    {"countryCode": "CH", "professionalBg": "Music Producer"},
+    {"countryCode": "CH", "professionalBg": "Vocal Coach"},
+    {"countryCode": "CH", "professionalBg": "Composer"},
+    {"countryCode": "CH", "professionalBg": "Conductor"},
+    {"countryCode": "CH", "professionalBg": "Recording Artist"},
+    {"countryCode": "DE", "professionalBg": "Music Producer"},
+    {"countryCode": "DE", "professionalBg": "Vocal Coach"},
+    {"countryCode": "DE", "professionalBg": "Composer"},
+    {"countryCode": "DE", "professionalBg": "Music Journalist"},
+    {"countryCode": "DE", "professionalBg": "Choreographer"},
+    {"countryCode": "FR", "professionalBg": "Composer"},
+    {"countryCode": "FR", "professionalBg": "Music Producer"},
+    {"countryCode": "FR", "professionalBg": "Conductor"},
+    {"countryCode": "FR", "professionalBg": "Vocal Coach"},
+    {"countryCode": "FR", "professionalBg": "Sound Engineer"},
+    {"countryCode": "IT", "professionalBg": "Conductor"},
+    {"countryCode": "IT", "professionalBg": "Composer"},
+    {"countryCode": "IT", "professionalBg": "Music Producer"},
+    {"countryCode": "IT", "professionalBg": "Recording Artist"},
+    {"countryCode": "IT", "professionalBg": "Music Journalist"},
+    {"countryCode": "ES", "professionalBg": "Choreographer"},
+    {"countryCode": "ES", "professionalBg": "Vocal Coach"},
+    {"countryCode": "ES", "professionalBg": "Composer"},
+    {"countryCode": "ES", "professionalBg": "Music Producer"},
+    {"countryCode": "ES", "professionalBg": "Sound Engineer"},
+    {"countryCode": "GB", "professionalBg": "Recording Artist"},
+    {"countryCode": "GB", "professionalBg": "Music Producer"},
+    {"countryCode": "GB", "professionalBg": "Vocal Coach"},
+    {"countryCode": "GB", "professionalBg": "Music Journalist"},
+    {"countryCode": "GB", "professionalBg": "Composer"},
+    {"countryCode": "SE", "professionalBg": "Music Producer"},
+    {"countryCode": "SE", "professionalBg": "Composer"},
+    {"countryCode": "SE", "professionalBg": "Vocal Coach"},
+    {"countryCode": "NO", "professionalBg": "Recording Artist"},
+    {"countryCode": "NO", "professionalBg": "Music Producer"},
+    {"countryCode": "NO", "professionalBg": "Conductor"}
   ],
 
   "citizens": [
-    { "countryCode": "SE" },
-    { "countryCode": "NO" },
-    { "countryCode": "FI" },
-    { "countryCode": "DK" },
-    { "countryCode": "IS" }
+    { "countryCode": "SE", "phoneNumber": "+46701234001" },
+    { "countryCode": "NO", "phoneNumber": "+47901234001" },
+    { "countryCode": "FI", "phoneNumber": "+35840234001" },
+    { "countryCode": "DK",  "phoneNumber": "+4520234001" },
+    { "countryCode": "IS", "phoneNumber": "+3546234001" }
   ]
 }
