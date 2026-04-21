@@ -10,8 +10,9 @@ COPY pom.xml .
 # Download dependencies (cached unless pom.xml changes)
 RUN ./mvnw dependency:go-offline -q
 
-# Copy source and build
+# Copy source and frontend static files, then build
 COPY src src
+COPY frontend src/main/resources/static
 RUN ./mvnw package -DskipTests -q
 
 # ── Stage 2: Run ────────────────────────────────────────────────────────────
