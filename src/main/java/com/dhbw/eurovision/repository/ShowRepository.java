@@ -4,6 +4,8 @@ import com.dhbw.eurovision.entity.Show;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.Optional;
+
 /**
  * Repository for Show.
  * Extend with custom query methods as needed.
@@ -12,6 +14,5 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ShowRepository extends JpaRepository<Show, Long> {
 
-    // TODO: add custom finders, e.g.:
-    // List<Show> findBy...(String param);
+    Optional<Show> findByShowName(String showName);
 }
