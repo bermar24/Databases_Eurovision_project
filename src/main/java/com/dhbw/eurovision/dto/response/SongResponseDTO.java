@@ -8,8 +8,9 @@ import lombok.Setter;
 /** Outbound payload for Song. */
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor
 public class SongResponseDTO {
-    private Long songId;
+    private Long   songId;
+    private String songTitle;
     private String singerName;
-    private String countryCode;   // just the FK code, not the full Country object
-    // TODO: expose songTitle, scoreId, etc. when those fields are added
+    private String countryCode;
+    private String countryName;   // full name — convenient for display
 }

@@ -21,7 +21,7 @@ public class AdminFactory {
         Admin admin = new Admin();
         admin.setCountry(country);
         admin.setAdminLevel(dto.getAdminLevel());
-        // TODO: set username, email once User entity fields are added
+        // Map additional shared User fields here if they are introduced.
         return admin;
     }
 

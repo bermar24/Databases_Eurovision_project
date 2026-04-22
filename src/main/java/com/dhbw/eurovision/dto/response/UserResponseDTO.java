@@ -14,5 +14,5 @@ public class UserResponseDTO {
     private Long userId;
     private String countryCode;
     private String userType;    // "JURY", "CITIZEN", or "ADMIN"
-    // TODO: add username, email when entity fields are added
+    // Add shared user fields here if they are introduced in User.
 }

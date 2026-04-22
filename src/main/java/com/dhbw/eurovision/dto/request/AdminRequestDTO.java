@@ -9,5 +9,5 @@ import lombok.Setter;
 public class AdminRequestDTO {
     private String countryCode;
     private Integer adminLevel;
-    // TODO: add username, email when entity fields are added
+    // Add shared user fields here if they are introduced in User.
 }

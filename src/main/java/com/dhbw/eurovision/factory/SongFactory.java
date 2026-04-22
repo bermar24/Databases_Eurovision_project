@@ -6,28 +6,28 @@ import com.dhbw.eurovision.entity.Country;
 import com.dhbw.eurovision.entity.Song;
 import org.springframework.stereotype.Component;
 
-/**
- * Factory for Song — converts between Entity <-> DTO.
- * Country must be resolved by the Service before calling toEntity().
- */
 @Component
 public class SongFactory {
 
-    /** Build a new Song entity. Country is resolved by the caller (SongService). */
     public Song toEntity(SongRequestDTO dto, Country country) {
         Song song = new Song();
+        song.setSongTitle(dto.getSongTitle());
         song.setSingerName(dto.getSingerName());
         song.setCountry(country);
-        // TODO: set songTitle, language etc. once entity fields are added
         return song;
     }
 
-    /** Convert a persisted Song entity to a response DTO. */
     public SongResponseDTO toResponseDTO(Song song) {
+        String countryName = (song.getCountry() != null)
+                ? song.getCountry().getCountryName() : null;
+        String countryCode = (song.getCountry() != null)
+                ? song.getCountry().getCountryCode() : null;
         return new SongResponseDTO(
                 song.getSongId(),
+                song.getSongTitle(),
                 song.getSingerName(),
-                song.getCountry() != null ? song.getCountry().getCountryCode() : null
+                countryCode,
+                countryName
         );
     }
 }

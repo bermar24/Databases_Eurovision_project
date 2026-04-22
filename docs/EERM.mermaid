@@ -34,6 +34,7 @@ erDiagram
 
     SONG {
         bigint song_id      PK  "AUTO_INCREMENT"
+        string song_title       "Official song title — NOT NULL"
         string singer_name      "Performing artist — NOT NULL"
         string country_code  FK "FK → country"
     }

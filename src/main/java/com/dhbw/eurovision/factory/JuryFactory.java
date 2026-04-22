@@ -17,7 +17,7 @@ public class JuryFactory {
         Jury jury = new Jury();
         jury.setCountry(country);
         jury.setProfessionalBg(dto.getProfessionalBg());
-        // TODO: set username, email once User entity fields are added
+        // Map additional shared User fields here if they are introduced.
         return jury;
     }
 

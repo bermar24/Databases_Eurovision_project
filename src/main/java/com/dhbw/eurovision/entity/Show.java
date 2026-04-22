@@ -29,16 +29,8 @@ public class Show {
     @Column(name = "show_name", nullable = false)
     private String showName;
 
-    // TODO: add show fields once team agrees, e.g.:
-    // @Column(name = "show_name", nullable = false)
-    // private String showName;
-    //
-    // @Column(name = "show_date")
-    // private LocalDate showDate;
-    //
-    // @Enumerated(EnumType.STRING)
-    // @Column(name = "show_type")
-    // private ShowType showType;  // SEMI_FINAL_1, SEMI_FINAL_2, GRAND_FINAL
+    // Optional extension fields if the data model is expanded later:
+
 
     // --- Relationships ---
 

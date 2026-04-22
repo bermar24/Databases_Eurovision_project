@@ -20,7 +20,7 @@ public class ShowFactory {
     public Show toEntity(ShowRequestDTO dto) {
         Show show = new Show();
         show.setShowName(dto.getShowName());
-        // TODO: set showDate, showType once entity fields are added
+        // Map additional fields here if Show is extended (e.g., date/type).
         return show;
     }
 

@@ -107,6 +107,7 @@ Relationships:
 | Attribute | Column | Constraints |
 |---|---|---|
 | `songId` | `song_id` | PK, AUTO_INCREMENT |
+| `songTitle` | `song_title` | `VARCHAR(255)` | NOT NULL | Official song title, e.g. "Bara bada bastu" |
 | `singerName` | `singer_name` | NOT NULL |
 | `country` | `country_code` | FK -> `country.country_code`, NOT NULL |
 
@@ -174,6 +175,7 @@ Unique constraint:
 Meaning:
 - one score row per song per show
 - same song can have separate scores in semifinal and grand final
+- the stored value is a single final total for that song/show pair
 
 ---
 
@@ -208,6 +210,7 @@ Meaning:
   - semifinals: citizen aggregation only
   - grand final: jury aggregation + citizen aggregation
 - both jury and citizen use country-based ranking aggregation with Eurovision scale
+- `calculateScoreForSong(songId, showId)` reuses the same show-level aggregation, so the quick recalculation returns the same final score as the show leaderboard
 
 ### 3.6 Song <-> Show (M:N)
 

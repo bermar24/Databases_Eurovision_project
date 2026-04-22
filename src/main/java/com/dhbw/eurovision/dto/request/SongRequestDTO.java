@@ -7,7 +7,7 @@ import lombok.Setter;
 /** Inbound payload for creating a Song. */
 @Getter @Setter @NoArgsConstructor
 public class SongRequestDTO {
+    private String songTitle;
     private String singerName;
-    private String countryCode;   // FK — which country this song represents
-    // TODO: add songTitle, language, etc. once agreed with your team
+    private String countryCode;
 }

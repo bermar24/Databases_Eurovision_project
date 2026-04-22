@@ -14,5 +14,5 @@ public class ShowResponseDTO {
     private String showName;
     private List<Long> songIds;    // IDs of songs in this show
     private List<Long> adminIds;   // IDs of admins managing this show
-    // TODO: add showName, showDate, showType when entity fields are added
+    // Add extra show fields here if Show is extended.
 }

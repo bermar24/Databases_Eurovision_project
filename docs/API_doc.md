@@ -254,10 +254,13 @@ All show-specific scores for one song.
 Recalculate full show:
 - Grand Final: jury aggregation + citizen aggregation
 - Semi-finals: citizen aggregation only
+- For each voter country, raw votes are summed per song first, then the top 10 songs receive Eurovision points `12,10,8,7,6,5,4,3,2,1`
 
 ### POST `/api/scores/calculate/{showId}/{songId}`
 
-Recalculate one song in one show (quick direct sum mode).
+Recalculate one song in one show.
+
+This endpoint uses the same country-ranking aggregation as `calculate-show`, so it returns the same final score as the show leaderboard for that song.
 
 ### POST `/api/scores/calculate-all`
 
@@ -275,6 +278,11 @@ Example score response:
   "countryCode": "SE"
 }
 ```
+
+Notes:
+- `songScore` is the final combined score for the song in that show.
+- There is one stored score row per `(song, show)` pair.
+- The current model keeps a single total score value, not separate persisted jury/citizen columns.
 
 ---
 
