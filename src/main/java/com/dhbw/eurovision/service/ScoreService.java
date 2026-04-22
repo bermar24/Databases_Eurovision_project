@@ -97,44 +97,12 @@ public class ScoreService {
         Show show = showRepository.findById(showId)
                 .orElseThrow(() -> new RuntimeException("Show not found: " + showId));
 
-        List<Song> songs = show.getSongs();
-        if (songs.isEmpty()) return Collections.emptyList();
-
-        boolean isGrandFinal = show.getShowName() != null &&
-                show.getShowName().trim().equalsIgnoreCase(GRAND_FINAL);
-
-        // ── Jury score (Grand Final only) ─────────────────────────────────
-        Map<Long, Integer> juryScoreMap = isGrandFinal
-                ? aggregateByCountry(
-                voteLogRepository.findByShow_ShowIdAndJuryIsNotNull(showId), true)
-                : Collections.emptyMap();
-
-        // ── Citizen score (all shows) ─────────────────────────────────────
-        Map<Long, Integer> citizenScoreMap = aggregateByCountry(
-                voteLogRepository.findByShow_ShowIdAndCitizenIsNotNull(showId), false);
-
-        // ── Upsert one Score row per (song, show) ─────────────────────────
-        List<ScoreResponseDTO> results = new ArrayList<>();
-        for (Song song : songs) {
-            int jury    = juryScoreMap.getOrDefault(song.getSongId(), 0);
-            int citizen = citizenScoreMap.getOrDefault(song.getSongId(), 0);
-
-            // Find existing (song, show) score or create new one
-            Score score = scoreRepository.findBySongAndShow(song, show)
-                    .orElse(new Score());
-            score.setSong(song);
-            score.setShow(show);
-            score.setSongScore(jury + citizen);
-
-            results.add(scoreFactory.toResponseDTO(scoreRepository.save(score)));
-        }
-
-        return results;
+        return upsertShowScores(show);
     }
 
     /**
      * Quick recalculation for a single song in a specific show.
-     * Uses direct point sum (not country aggregation) — for fast post-vote updates.
+     * Reuses the same show-level national aggregation as the full leaderboard.
      */
     public ScoreResponseDTO calculateScoreForSong(Long songId, Long showId) {
         Song song = songRepository.findById(songId)
@@ -142,11 +110,8 @@ public class ScoreService {
         Show show = showRepository.findById(showId)
                 .orElseThrow(() -> new RuntimeException("Show not found: " + showId));
 
-        int total = song.getVoteLogs().stream()
-                .filter(vl -> vl.getShow() != null &&
-                        vl.getShow().getShowId().equals(showId))
-                .mapToInt(vl -> vl.getPoints() != null ? vl.getPoints() : 0)
-                .sum();
+        Map<Long, Integer> totalsBySongId = calculateShowTotals(show);
+        int total = totalsBySongId.getOrDefault(song.getSongId(), 0);
 
         Score score = scoreRepository.findBySongAndShow(song, show).orElse(new Score());
         score.setSong(song);
@@ -163,6 +128,46 @@ public class ScoreService {
     }
 
     // ── Private helpers ───────────────────────────────────────────────────────
+
+    private List<ScoreResponseDTO> upsertShowScores(Show show) {
+        List<Song> songs = show.getSongs();
+        if (songs.isEmpty()) return Collections.emptyList();
+
+        Map<Long, Integer> totalsBySongId = calculateShowTotals(show);
+
+        List<ScoreResponseDTO> results = new ArrayList<>();
+        for (Song song : songs) {
+            Score score = scoreRepository.findBySongAndShow(song, show)
+                    .orElse(new Score());
+            score.setSong(song);
+            score.setShow(show);
+            score.setSongScore(totalsBySongId.getOrDefault(song.getSongId(), 0));
+
+            results.add(scoreFactory.toResponseDTO(scoreRepository.save(score)));
+        }
+        return results;
+    }
+
+    private Map<Long, Integer> calculateShowTotals(Show show) {
+        Long showId = show.getShowId();
+        boolean isGrandFinal = show.getShowName() != null &&
+                show.getShowName().trim().equalsIgnoreCase(GRAND_FINAL);
+
+        Map<Long, Integer> juryScoreMap = isGrandFinal
+                ? aggregateByCountry(voteLogRepository.findByShow_ShowIdAndJuryIsNotNull(showId), true)
+                : Collections.emptyMap();
+
+        Map<Long, Integer> citizenScoreMap = aggregateByCountry(
+                voteLogRepository.findByShow_ShowIdAndCitizenIsNotNull(showId), false);
+
+        Map<Long, Integer> totals = new HashMap<>();
+        for (Song song : show.getSongs()) {
+            Long songId = song.getSongId();
+            totals.put(songId,
+                    juryScoreMap.getOrDefault(songId, 0) + citizenScoreMap.getOrDefault(songId, 0));
+        }
+        return totals;
+    }
 
     /**
      * National aggregation — identical for jury and citizen.
@@ -195,7 +200,9 @@ public class ScoreService {
         Map<Long, Integer> scoreMap = new HashMap<>();
         for (Map<Long, Integer> countryVotes : rawByCountry.values()) {
             List<Map.Entry<Long, Integer>> ranked = new ArrayList<>(countryVotes.entrySet());
-            ranked.sort((a, b) -> b.getValue() - a.getValue());
+            ranked.sort(Comparator
+                    .comparing(Map.Entry<Long, Integer>::getValue, Comparator.reverseOrder())
+                    .thenComparing(Map.Entry::getKey));
             for (int i = 0; i < Math.min(10, ranked.size()); i++) {
                 scoreMap.merge(ranked.get(i).getKey(), POINTS_SCALE[i], Integer::sum);
             }
