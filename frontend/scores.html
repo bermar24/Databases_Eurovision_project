@@ -282,13 +282,17 @@
         const pct  = Math.round((score.songScore / maxScore) * 100);
         // Use singerName/countryCode from enriched DTO, fall back to song map
         const song = songMap[score.songId] || {};
-        const singer  = score.singerName  || song.singerName  || '—';
-        const country = score.countryCode || song.countryCode || '—';
+        const title   = score.singerName
+                ? (song.songTitle ? `${song.songTitle} (${score.singerName})` : score.singerName)
+                : (song.singerName || '—');
+        const country = score.countryCode
+                ? `${score.countryCode} — ${song.countryName || score.countryCode}`
+                : '—';
 
         const tr = document.createElement('tr');
         tr.innerHTML = `
           <td class="rank rank-${rank <= 3 ? rank : ''}">${rank}</td>
-          <td>${singer}</td>
+          <td>${title}</td>
           <td>${country}</td>
           <td>
             <span class="score-badge">${score.songScore}</span>
