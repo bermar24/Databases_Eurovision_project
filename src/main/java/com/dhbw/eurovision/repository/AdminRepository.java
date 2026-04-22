@@ -11,7 +11,4 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface AdminRepository extends JpaRepository<Admin, Long> {
-
-    // TODO: add custom finders, e.g.:
-    // List<Admin> findBy...(String param);
 }

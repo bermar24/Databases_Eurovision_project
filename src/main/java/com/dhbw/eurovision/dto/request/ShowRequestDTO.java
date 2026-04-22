@@ -8,6 +8,6 @@ import lombok.Setter;
 @Getter @Setter @NoArgsConstructor
 public class ShowRequestDTO {
     private String showName;
-    // TODO: add showDate, showType
+    // Add extra show fields here if Show is extended.
     // private String showType;  // e.g. "SEMI_FINAL_1", "GRAND_FINAL"
 }

@@ -27,12 +27,7 @@ public class User {
     @Column(name = "user_id")
     private Long userId;
 
-    // TODO: add shared fields once agreed with team, e.g.:
-    // @Column(name = "username", nullable = false, unique = true)
-    // private String username;
-    //
-    // @Column(name = "email", nullable = false, unique = true)
-    // private String email;
+    // Optional shared fields if the data model is expanded later:
 
     /** FK to Country — the "Has" relationship from EERM */
     @ManyToOne(fetch = FetchType.LAZY)

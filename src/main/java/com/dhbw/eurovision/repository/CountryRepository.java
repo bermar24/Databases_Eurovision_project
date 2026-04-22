@@ -11,7 +11,4 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface CountryRepository extends JpaRepository<Country, String> {
-
-    // TODO: add custom finders, e.g.:
-    // List<Country> findBy...(String param);
 }

@@ -11,7 +11,4 @@ import org.springframework.stereotype.Repository;
  */
 @Repository
 public interface JuryRepository extends JpaRepository<Jury, Long> {
-
-    // TODO: add custom finders, e.g.:
-    // List<Jury> findBy...(String param);
 }

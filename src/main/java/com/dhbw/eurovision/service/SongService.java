@@ -53,6 +53,4 @@ public class SongService {
     public void deleteSong(Long id) {
         songRepository.deleteById(id);
     }
-
-    // TODO: getSongsByCountry, getSongsByShow, etc.
 }
