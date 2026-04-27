@@ -11,7 +11,7 @@ services:
       MYSQL_USER: eurovision
       MYSQL_PASSWORD: eurovisionpass
     ports:
-      - "3306:3306"
+      - "3307:3306"
     volumes:
       # Named volume so data survives container restarts
       - mysql_data:/var/lib/mysql

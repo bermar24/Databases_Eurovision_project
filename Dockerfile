@@ -7,6 +7,8 @@ COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
 
+RUN sed -i 's/\r$//' mvnw && chmod +x mvnw
+
 # Download dependencies (cached unless pom.xml changes)
 RUN ./mvnw dependency:go-offline -q
 
